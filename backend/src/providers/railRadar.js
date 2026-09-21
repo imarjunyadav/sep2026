@@ -32,7 +32,7 @@ function apiGet(path) {
         agent: proxyAgent,
         headers: {
           Authorization: `Bearer ${config.railRadarKey}`,
-          'User-Agent': 'CityLink/1.0',
+          'User-Agent': 'CityOne/1.0',
           Accept: 'application/json',
         },
       },

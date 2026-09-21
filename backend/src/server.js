@@ -34,7 +34,7 @@ app.get('/ondc-site-verification.html', siteVerificationHandler);
 
 // ── Root-level BPP callbacks ──────────────────────────────────────────────────
 // ONDC sends async responses to {bap_uri}/{action}.
-// With bap_uri = https://mobility.taqneeki.in (no path), callbacks arrive at
+// With bap_uri = https://{ONDC_SUBSCRIBER_URL} (no path), callbacks arrive at
 // the root (e.g. POST /on_search), not under /ondc/on_search.
 // These routes are identical in behaviour to the /ondc/on_* routes below.
 app.post('/on_subscribe', onSubscribeHandler);
@@ -64,7 +64,7 @@ app.use('/ondc', ondcRouter);
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
-    service: 'sih26-backend',
+    service: 'cityone-backend',
     env: config.nodeEnv,
     time: new Date().toISOString(),
     providers: {

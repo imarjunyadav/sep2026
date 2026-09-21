@@ -38,7 +38,7 @@ test.describe('Mumbai Multimodal smoke tests', () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.service).toBe('sih26-backend');
+    expect(body.service).toBe('cityone-backend');
   });
 
   test('results panel shows after navigation to /?screen=results state (back to search works)', async ({ page }) => {

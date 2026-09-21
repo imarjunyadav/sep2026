@@ -1,6 +1,6 @@
 # ONDC BAP Implementation Guide
 
-This document covers the complete ONDC TRV11 v2.0.0 BAP (Buyer App) implementation in CityLink. It is intended for engineers continuing ONDC integration, Pramaan testing, and ONDC certification.
+This document covers the complete ONDC TRV11 v2.0.0 BAP (Buyer App) implementation in CityOne. It is intended for engineers continuing ONDC integration, Pramaan testing, and ONDC certification.
 
 ---
 
@@ -25,7 +25,7 @@ This document covers the complete ONDC TRV11 v2.0.0 BAP (Buyer App) implementati
 
 ONDC (Open Network for Digital Commerce) is an open protocol for commerce, built on the Beckn specification. It enables any buyer app and any seller app to transact without direct integration — they speak a common protocol over HTTP.
 
-**CityLink's role: BAP (Buyer App Platform)**
+**CityOne's role: BAP (Buyer App Platform)**
 
 A BAP:
 - Initiates all transactions (search, select, init, confirm, status, support)
@@ -47,14 +47,14 @@ A BAP:
 
 | Field | Value |
 |---|---|
-| `subscriber_id` | `mobility.taqneeki.in` |
-| `subscriber_url` | `https://mobility.taqneeki.in` |
+| `subscriber_id` | `ONDC_SUBSCRIBER_ID` env var — set after completing ONDC registration |
+| `subscriber_url` | `ONDC_SUBSCRIBER_URL` env var — your public HTTPS base URL |
 | Domain | `ONDC:TRV11` |
 | City | `std:022` (Mumbai) |
 | Type | `buyerApp` |
 | Environment | Pre-production (`preprod.registry.ondc.org`) |
 
-The `subscriber_id` is included in every outgoing request's `context.bap_id`. The `subscriber_url` is `context.bap_uri` — BPPs send async callbacks by appending the action: `POST https://mobility.taqneeki.in/on_search`.
+The `subscriber_id` is included in every outgoing request's `context.bap_id`. The `subscriber_url` is `context.bap_uri` — BPPs send async callbacks by appending the action: `POST {ONDC_SUBSCRIBER_URL}/on_search`.
 
 The `unique_key_id` is a UUID assigned during registration and included in every Authorization header's `keyId`.
 
@@ -75,7 +75,7 @@ If you ever need to re-generate keys (for a new registration):
 ```bash
 node backend/src/ondc/keygen.js
 ```
-**Do not run this for the existing Taqneeki registration** — it generates new keys that would need re-registration with ONDC.
+Run this once per ONDC registration. Store the output securely — the private keys cannot be recovered if lost and would require re-registration with ONDC.
 
 ---
 
@@ -86,7 +86,7 @@ node backend/src/ondc/keygen.js
 Every request we send to the ONDC Gateway or a BPP must carry an `Authorization` header in this format:
 
 ```
-Signature keyId="mobility.taqneeki.in|<unique_key_id>|ed25519",
+Signature keyId="{subscriber_id}|<unique_key_id>|ed25519",
           algorithm="ed25519",
           created="<unix_timestamp>",
           expires="<unix_timestamp + 300>",
@@ -133,10 +133,10 @@ Without this, `req.body` is the parsed JSON object and the original bytes (which
 ## The Full Booking Flow
 
 ```
-User selects Metro in CityLink
+User selects Metro in CityOne
          │
          ▼
-POST /ondc/api/search  (CityLink frontend → backend)
+POST /ondc/api/search  (CityOne frontend → backend)
          │  backend creates txnId, signs, POSTs to gateway
          ▼
 POST https://preprod.gateway.ondc.org/search
@@ -148,7 +148,7 @@ Backend receives ACK from gateway
          │
          │  [async, ~1–5 seconds later]
          ▼
-POST https://mobility.taqneeki.in/on_search  (BPP → our server)
+POST https://{ONDC_SUBSCRIBER_URL}/on_search  (BPP → our server)
          │  backend verifies BPP signature
          │  parses catalog → stores searchOptions, bppId, bppUri
          │  emits SSE event { event: 'on_search', options: [...] }
@@ -162,7 +162,7 @@ POST /ondc/api/select  { txnId, providerId, itemId, quantity }
          │
          │  [async]
          ▼
-POST https://mobility.taqneeki.in/on_select  (BPP → our server)
+POST https://{ONDC_SUBSCRIBER_URL}/on_select  (BPP → our server)
          │  backend stores quote (totalAmount, currency, breakup, payment)
          │  emits SSE { event: 'on_select', quote }
          │
@@ -175,7 +175,7 @@ POST /ondc/api/init  { txnId, billing: { name, email, phone } }
          │
          │  [async]
          ▼
-POST https://mobility.taqneeki.in/on_init  (BPP → our server)
+POST https://{ONDC_SUBSCRIBER_URL}/on_init  (BPP → our server)
          │  backend stores payment object (includes BPP's payment.id)
          │  emits SSE { event: 'on_init', totalAmount, payment }
          │
@@ -190,7 +190,7 @@ POST /ondc/api/confirm  { txnId, paymentTransactionId }
          │
          │  [async]
          ▼
-POST https://mobility.taqneeki.in/on_confirm  (BPP → our server)
+POST https://{ONDC_SUBSCRIBER_URL}/on_confirm  (BPP → our server)
          │  backend stores orderId, QR ticket data
          │  emits SSE { event: 'on_confirm', orderId, tickets }
          │
@@ -215,7 +215,7 @@ Frontend shows QR code — user scans at Metro gate
 | `backend/src/ondc/core/errors.js` | `ack()`, `nack()`, ONDC error codes |
 | `backend/src/ondc/adapters/metro/actions.js` | Builds TRV11 v2.0.0 payloads: search/select/init/confirm/status/support |
 | `backend/src/ondc/adapters/metro/callbacks.js` | Handles inbound BPP responses: on_search/on_select/… |
-| `backend/src/ondc/adapters/metro/mapper.js` | Parses raw ONDC JSON into CityLink-friendly objects |
+| `backend/src/ondc/adapters/metro/mapper.js` | Parses raw ONDC JSON into CityOne-friendly objects |
 | `backend/src/ondc/store/orderStore.js` | In-memory transaction store (search → ticket lifecycle) |
 | `backend/src/ondc/router.js` | Express router: /ondc/api/* + /ondc/on_* + SSE |
 | `backend/src/server.js` | Root-level /on_* routes (the real BPP callback destinations) |
@@ -231,8 +231,8 @@ Frontend shows QR code — user scans at Metro gate
 See the main [README Environment Variables section](../README.md#environment-variables) for the full table. ONDC-specific variables:
 
 ```
-ONDC_SUBSCRIBER_ID=mobility.taqneeki.in
-ONDC_SUBSCRIBER_URL=https://mobility.taqneeki.in
+ONDC_SUBSCRIBER_ID=<your-registered-domain>
+ONDC_SUBSCRIBER_URL=https://<your-registered-domain>
 ONDC_UNIQUE_KEY_ID=<uuid-from-ondc-portal>
 ONDC_SIGNING_PRIVATE_KEY=<64-byte-base64>    # secret
 ONDC_SIGNING_PUBLIC_KEY=<32-byte-base64>
@@ -254,7 +254,7 @@ ONDC_STATIC_TERMS_URL=
 
 ### Inbound (BPP → our server)
 
-All six callback actions arrive at root-level routes (because `bap_uri = https://mobility.taqneeki.in` with no path, so the BPP appends the action directly). These routes are also available under `/ondc/on_*` as aliases.
+All six callback actions arrive at root-level routes (because `bap_uri = {ONDC_SUBSCRIBER_URL}` has no path, so the BPP appends the action directly). These routes are also available under `/ondc/on_*` as aliases.
 
 | Route | Handler |
 |---|---|
@@ -292,8 +292,8 @@ All `/on_*` routes (except `/on_subscribe`) are protected by `ondcAuthMiddleware
     "domain": "ONDC:TRV11",
     "action": "search",
     "version": "2.0.0",
-    "bap_id": "mobility.taqneeki.in",
-    "bap_uri": "https://mobility.taqneeki.in",
+    "bap_id": "<ONDC_SUBSCRIBER_ID>",
+    "bap_uri": "<ONDC_SUBSCRIBER_URL>",
     "transaction_id": "<uuid>",
     "message_id": "<uuid>",
     "location": { "country": { "code": "IND" }, "city": { "code": "std:022" } },
@@ -511,8 +511,8 @@ If SSE is inconvenient for testing: `GET /ondc/api/order/:txnId` returns the cur
 
 Create a Postman environment with:
 ```
-base_url : https://mobility.taqneeki.in     (live deployment)
-local_url: http://localhost:8080             (local development)
+base_url : https://<your-domain>    (live deployment)
+local_url: http://localhost:8080    (local development)
 txnId    : (leave blank; fill after search)
 ```
 
@@ -524,7 +524,7 @@ These work against `http://localhost:8080` while developing locally:
 ```
 GET {{local_url}}/api/health
 ```
-Expected: `{ "ok": true, "service": "sih26-backend", ... }`
+Expected: `{ "ok": true, "service": "cityone-backend", ... }`
 
 **2. Site verification**
 ```
@@ -576,11 +576,11 @@ Keep this open — events arrive here when callbacks come in.
 
 ### Tests that require DNS + TLS
 
-The following require `mobility.taqneeki.in` to resolve to your server with valid TLS, because ONDC BPPs send callbacks to that URL:
+The following require `ONDC_SUBSCRIBER_URL` to resolve to your server with valid TLS, because ONDC BPPs send callbacks to that URL:
 
 - Full search → on_search callback → select → on_select → … → on_confirm flow
 - ONDC Pramaan testing via Protocol Workbench
-- ONDC registry verification (registry fetches `/ondc-site-verification.html` from `mobility.taqneeki.in`)
+- ONDC registry verification (registry fetches `/ondc-site-verification.html` from your subscriber domain)
 
 ### Simulating a callback locally (advanced)
 
@@ -593,16 +593,19 @@ To test the callback handler without a real BPP, you can send a manually constru
 
 ## Onboarding and Site Verification
 
-### What's already done
+### ONDC Registration Steps
 
-Taqneeki has completed ONDC BAP registration:
-- Keys generated and submitted to ONDC portal
-- `mobility.taqneeki.in` registered as subscriber_id
-- `unique_key_id` assigned
+1. Generate key pairs: `node backend/src/ondc/keygen.js` — run once, store output in your secrets manager
+2. Generate the subscriber registration payload: `node backend/src/ondc/scripts/subscribe-payload.js`
+3. POST the payload to `https://preprod.registry.ondc.org/ondc/subscribe`
+4. Note the `unique_req_id` issued by the ONDC portal
+5. Generate site verification: `node backend/src/ondc/scripts/sign-site-verification.js <unique_req_id>`
+6. Set `ONDC_SITE_VERIFICATION_SIGNED` in your environment
+7. Set all other `ONDC_*` env vars from your key generation output and the ONDC portal
 
 ### Site verification
 
-The ONDC registry verifies domain ownership by fetching `GET https://mobility.taqneeki.in/ondc-site-verification.html` and checking the `content` attribute of the `<meta name="ondc-site-verification">` tag.
+The ONDC registry verifies domain ownership by fetching `GET https://{ONDC_SUBSCRIBER_URL}/ondc-site-verification.html` and checking the `content` attribute of the `<meta name="ondc-site-verification">` tag.
 
 The value is: `base64(Ed25519_sign(unique_req_id, signing_private_key))`
 
@@ -628,7 +631,7 @@ During ONDC registration, the registry POSTs an encrypted challenge to `POST /on
 
 ONDC uses a fixed published X25519 key per environment (UAT or prod), not an ephemeral key per challenge. The UAT key is hardcoded in `onboard.js:ONDC_ENC_PUBLIC_KEYS.uat`.
 
-This process is already complete for the Taqneeki registration. It would only need to be repeated if re-registering or rotating keys.
+This must be completed once during initial ONDC registration. It would only need to be repeated if re-registering or rotating keys.
 
 ---
 

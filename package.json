@@ -1,8 +1,8 @@
 {
-  "name": "sih26",
+  "name": "cityone",
   "version": "0.1.0",
   "private": true,
-  "description": "Mumbai multimodal journey planner (SIH 2026 PS-23)",
+  "description": "CityOne — Mumbai multimodal journey planner with ONDC Metro ticketing",
   "workspaces": [
     "backend",
     "frontend"

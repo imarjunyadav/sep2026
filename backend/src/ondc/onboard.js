@@ -50,7 +50,7 @@ export function siteVerificationHandler(req, res) {
   <head>
     <meta name="ondc-site-verification" content="${signedContent}" />
   </head>
-  <body>CityLink ONDC BAP</body>
+  <body>CityOne ONDC BAP</body>
 </html>`);
 }
 

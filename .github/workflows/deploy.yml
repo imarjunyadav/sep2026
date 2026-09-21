@@ -1,73 +1,95 @@
-name: Deploy to Cloud Run
+name: Build and Deploy
+
+# CityOne deployment workflow — adapt this to your own infrastructure.
+#
+# The application is a single Docker image that listens on PORT (default 8080).
+# All credentials are injected as environment variables at runtime.
+# Private keys (ONDC_SIGNING_PRIVATE_KEY, ONDC_ENCRYPTION_PRIVATE_KEY) must
+# come from a secrets manager — never from repository secrets or env vars
+# stored in plaintext.
+#
+# This is a generic Docker build + push template. The deploy step is a stub
+# that you replace with your own deployment target (SSH to a VM, Kubernetes,
+# any cloud run service, etc.).
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-env:
-  REGION: asia-south1
-  SERVICE: citylink
-  REGISTRY: asia-south1-docker.pkg.dev
-
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: projects/122591058801/locations/global/workloadIdentityPools/github-actions/providers/github
-          service_account: github-actions@project-ed1c5c4b-97ab-4bba-98e.iam.gserviceaccount.com
+      # ── Build Docker image ───────────────────────────────────────────────────
+      # The Dockerfile does a two-stage build: builds the frontend in stage 1,
+      # produces a lean runtime image in stage 2.
+      - name: Build Docker image
+        run: docker build -t cityone:${{ github.sha }} -t cityone:latest .
 
-      - uses: google-github-actions/setup-gcloud@v2
+      # ── Push image ──────────────────────────────────────────────────────────
+      # Replace this step with your own registry push.
+      # Examples:
+      #   Docker Hub:        docker push <username>/cityone:latest
+      #   GitHub Packages:   docker push ghcr.io/<owner>/cityone:latest
+      #   GCP Artifact Reg:  docker push <region>-docker.pkg.dev/<project>/cityone/app:latest
+      #   AWS ECR:           aws ecr get-login-password | docker login ... && docker push ...
+      #
+      # - name: Push image
+      #   run: docker push cityone:latest
 
-      - run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
-
-      - name: Build and push
-        run: |
-          IMAGE=${{ env.REGISTRY }}/${{ steps.auth.outputs.project_id }}/citylink/app
-          docker build -t ${IMAGE}:${{ github.sha }} -t ${IMAGE}:latest .
-          docker push ${IMAGE} --all-tags
-
-      - name: Deploy to Cloud Run
-        # ONDC public-key values (non-sensitive) are stored as GitHub Actions Variables
-        # (Settings → Secrets and variables → Variables) and referenced via vars.*
-        # Private keys are never in this file; they are pulled from Secret Manager at
-        # Cloud Run runtime by the service account (122591058801-compute@developer.gserviceaccount.com).
-        env:
-          ONDC_UNIQUE_KEY_ID:            ${{ vars.ONDC_UNIQUE_KEY_ID }}
-          ONDC_SIGNING_PUBLIC_KEY:       ${{ vars.ONDC_SIGNING_PUBLIC_KEY }}
-          ONDC_ENCRYPTION_PUBLIC_KEY:    ${{ vars.ONDC_ENCRYPTION_PUBLIC_KEY }}
-          ONDC_SITE_VERIFICATION_SIGNED: ${{ vars.ONDC_SITE_VERIFICATION_SIGNED }}
-        run: |
-          IMAGE=${{ env.REGISTRY }}/${{ steps.auth.outputs.project_id }}/citylink/app
-
-          # Build --update-env-vars value in parts to avoid shell-quoting issues
-          # with base64 '=' padding and URL ':' characters inside a quoted string.
-          # --update-env-vars adds/updates only these vars; existing Cloud Run
-          # env vars (Google Maps, RailRadar, etc.) are left untouched.
-          ENV_VARS="ONDC_SUBSCRIBER_ID=mobility.taqneeki.in"
-          ENV_VARS="${ENV_VARS},ONDC_SUBSCRIBER_URL=https://mobility.taqneeki.in"
-          ENV_VARS="${ENV_VARS},ONDC_UNIQUE_KEY_ID=${ONDC_UNIQUE_KEY_ID}"
-          ENV_VARS="${ENV_VARS},ONDC_SIGNING_PUBLIC_KEY=${ONDC_SIGNING_PUBLIC_KEY}"
-          ENV_VARS="${ENV_VARS},ONDC_ENCRYPTION_PUBLIC_KEY=${ONDC_ENCRYPTION_PUBLIC_KEY}"
-          ENV_VARS="${ENV_VARS},ONDC_SITE_VERIFICATION_SIGNED=${ONDC_SITE_VERIFICATION_SIGNED}"
-          ENV_VARS="${ENV_VARS},ONDC_REGISTRY_URL=https://preprod.registry.ondc.org"
-          ENV_VARS="${ENV_VARS},ONDC_GATEWAY_URL=https://preprod.gateway.ondc.org"
-          ENV_VARS="${ENV_VARS},ONDC_ENV=uat"
-          ENV_VARS="${ENV_VARS},ONDC_BUYER_FINDER_FEES_PCT=1"
-          ENV_VARS="${ENV_VARS},ONDC_COURT_JURISDICTION=Mumbai"
-          ENV_VARS="${ENV_VARS},ONDC_MOCK_PAYMENT=false"
-
-          gcloud run deploy ${{ env.SERVICE }} \
-            --image=${IMAGE}:${{ github.sha }} \
-            --region=${{ env.REGION }} \
-            --update-secrets="ONDC_SIGNING_PRIVATE_KEY=ondc-signing-private-key:latest,ONDC_ENCRYPTION_PRIVATE_KEY=ondc-encryption-private-key:latest" \
-            --update-env-vars="${ENV_VARS}"
+      # ── Deploy ──────────────────────────────────────────────────────────────
+      # Replace this stub with your own deployment step.
+      #
+      # Required environment variables at runtime (inject via your secrets manager):
+      #
+      #   GOOGLE_BACKEND_MAPS_KEY          — Google Routes + Places API key
+      #   GOOGLE_FRONTEND_MAPS_KEY         — Google Maps JS API key (browser)
+      #   RAILRADAR_API_KEY                — RailRadar Mumbai Local API key
+      #   ONDC_SUBSCRIBER_ID               — your registered ONDC subscriber domain
+      #   ONDC_SUBSCRIBER_URL              — your public HTTPS base URL
+      #   ONDC_UNIQUE_KEY_ID               — UUID from ONDC portal registration
+      #   ONDC_SIGNING_PRIVATE_KEY         — Ed25519 private key (SECRET)
+      #   ONDC_SIGNING_PUBLIC_KEY          — Ed25519 public key
+      #   ONDC_ENCRYPTION_PRIVATE_KEY      — X25519 private key (SECRET)
+      #   ONDC_ENCRYPTION_PUBLIC_KEY       — X25519 public key
+      #   ONDC_SITE_VERIFICATION_SIGNED    — base64 site verification signature
+      #   ONDC_REGISTRY_URL                — https://preprod.registry.ondc.org (uat)
+      #   ONDC_GATEWAY_URL                 — https://preprod.gateway.ondc.org (uat)
+      #   ONDC_ENV                         — uat (pre-production) or prod
+      #   ONDC_MOCK_PAYMENT                — true for Pramaan testing
+      #
+      # Example SSH deploy to a Linux server:
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
+      #     script: |
+      #       docker pull cityone:latest
+      #       docker stop cityone || true
+      #       docker rm cityone || true
+      #       docker run -d --restart unless-stopped \
+      #         --name cityone \
+      #         -p 8080:8080 \
+      #         -e GOOGLE_BACKEND_MAPS_KEY="${{ secrets.GOOGLE_BACKEND_MAPS_KEY }}" \
+      #         -e RAILRADAR_API_KEY="${{ secrets.RAILRADAR_API_KEY }}" \
+      #         -e ONDC_SUBSCRIBER_ID="${{ vars.ONDC_SUBSCRIBER_ID }}" \
+      #         -e ONDC_SUBSCRIBER_URL="${{ vars.ONDC_SUBSCRIBER_URL }}" \
+      #         -e ONDC_UNIQUE_KEY_ID="${{ vars.ONDC_UNIQUE_KEY_ID }}" \
+      #         -e ONDC_SIGNING_PRIVATE_KEY="${{ secrets.ONDC_SIGNING_PRIVATE_KEY }}" \
+      #         -e ONDC_SIGNING_PUBLIC_KEY="${{ vars.ONDC_SIGNING_PUBLIC_KEY }}" \
+      #         -e ONDC_ENCRYPTION_PRIVATE_KEY="${{ secrets.ONDC_ENCRYPTION_PRIVATE_KEY }}" \
+      #         -e ONDC_ENCRYPTION_PUBLIC_KEY="${{ vars.ONDC_ENCRYPTION_PUBLIC_KEY }}" \
+      #         -e ONDC_SITE_VERIFICATION_SIGNED="${{ vars.ONDC_SITE_VERIFICATION_SIGNED }}" \
+      #         -e ONDC_REGISTRY_URL="https://preprod.registry.ondc.org" \
+      #         -e ONDC_GATEWAY_URL="https://preprod.gateway.ondc.org" \
+      #         -e ONDC_ENV="uat" \
+      #         -e ONDC_MOCK_PAYMENT="true" \
+      #         cityone:latest
+      - name: Deploy (stub — replace with your deployment target)
+        run: echo "Deploy step not configured. See comments above."
