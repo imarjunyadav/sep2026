@@ -1,0 +1,28 @@
+# Git history
+.git/
+
+# Secrets — never bake into the image
+.env
+.env.*
+!.env.example
+
+# Local installed modules (rebuilt inside Docker)
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Frontend build output (rebuilt inside Docker)
+frontend/dist/
+
+# CI / CD
+.github/
+
+# Dev / test artefacts
+e2e/
+test-results/
+playwright-report/
+playwright.config.js
+test_*.js
+
+# Editor / tooling
+.claude/

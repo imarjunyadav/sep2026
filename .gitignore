@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+env_all.txt
+env_vars.txt
+
+node_modules/
+.next/
+dist/
+test-results/
+playwright-report/
+

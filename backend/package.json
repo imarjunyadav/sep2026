@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test:google": "node src/test-providers.js",
+    "test:railradar": "node src/test-railradar.js",
+    "test:journey": "node src/test-journey-service.js",
+    "test:api": "node src/test-api-contract.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.21.2",
+    "https-proxy-agent": "^9.1.0"
+  }
+}
