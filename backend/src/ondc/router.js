@@ -120,7 +120,10 @@ ondcRouter.post('/api/search', async (req, res) => {
   const payload = buildSearch({ transactionId: txnId, from, to });
 
   try {
-    const ackResp = await signedPost(`${ondcConfig.gatewayUrl}/search`, payload);
+    const searchUrl = ondcConfig.workbenchMode
+      ? ondcConfig.workbenchUrl
+      : `${ondcConfig.gatewayUrl}/search`;
+    const ackResp = await signedPost(searchUrl, payload);
     console.log('[ondc/search] Gateway ACK:', JSON.stringify(ackResp));
     return res.json({ txnId, context: payload.context });
   } catch (err) {
