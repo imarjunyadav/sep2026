@@ -8,6 +8,7 @@
 import https from 'node:https';
 import { createAuthorizationHeader } from './signing.js';
 import { ondcConfig } from '../config.js';
+import { logRequest } from '../store/requestLog.js';
 
 /**
  * POST a signed ONDC message to a URL.
@@ -23,6 +24,8 @@ export async function signedPost(url, payload) {
 
   const body = JSON.stringify(payload);
 
+  console.log(`[ondc-http] --> POST ${url}`, body);
+
   const authHeader = createAuthorizationHeader(
     body,
     ondcConfig.signingPrivateKey,
@@ -30,7 +33,35 @@ export async function signedPost(url, payload) {
     ondcConfig.uniqueKeyId,
   );
 
-  return httpPost(url, body, authHeader);
+  const start = Date.now();
+  let resp;
+  try {
+    resp = await httpPost(url, body, authHeader);
+    console.log(`[ondc-http] <-- ${url}`, JSON.stringify(resp));
+    logRequest({
+      direction: 'outbound',
+      action: payload.context?.action,
+      transactionId: payload.context?.transaction_id,
+      messageId: payload.context?.message_id,
+      url,
+      requestBody: payload,
+      responseBody: resp,
+      durationMs: Date.now() - start,
+    });
+    return resp;
+  } catch (err) {
+    logRequest({
+      direction: 'outbound',
+      action: payload.context?.action,
+      transactionId: payload.context?.transaction_id,
+      messageId: payload.context?.message_id,
+      url,
+      requestBody: payload,
+      durationMs: Date.now() - start,
+      error: err.message,
+    });
+    throw err;
+  }
 }
 
 async function httpPost(url, body, authorizationHeader) {

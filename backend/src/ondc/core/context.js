@@ -21,12 +21,14 @@ export function buildContext({
   bppUri,
   cityCode = 'std:022',
 }) {
+  const bapUri = ondcConfig.subscriberUrl?.replace(/\/+$/, '') ?? null;
+
   const ctx = {
     domain: 'ONDC:TRV11',
     action,
     version: '2.0.0',
     bap_id: ondcConfig.subscriberId,
-    bap_uri: ondcConfig.subscriberUrl,
+    bap_uri: bapUri,
     transaction_id: transactionId ?? crypto.randomUUID(),
     message_id: messageId ?? crypto.randomUUID(),
     location: {

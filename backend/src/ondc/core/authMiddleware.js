@@ -12,8 +12,14 @@
 import { extractKeyId, verifyAuthorizationHeader } from './signing.js';
 import { lookupPublicKey } from './registry.js';
 import { nack, ErrCode } from './errors.js';
+import { ondcConfig } from '../config.js';
 
 export async function ondcAuthMiddleware(req, res, next) {
+  if (ondcConfig.skipAuthVerification) {
+    console.log('[ondc-auth] Skipping signature verification (ONDC_SKIP_AUTH_VERIFICATION=true)');
+    return next();
+  }
+
   const authHeader = req.headers['authorization'];
   const gatewayHeader = req.headers['x-gateway-authorization'];
 
@@ -21,8 +27,6 @@ export async function ondcAuthMiddleware(req, res, next) {
     return res.status(401).json(nack('DOMAIN-ERROR', ErrCode.INVALID_SIGNATURE, 'Missing Authorization header'));
   }
 
-  // Raw body for signature verification — express json() parses it, so we re-serialize
-  // We keep the original raw body via the rawBody field set by express.json({ verify })
   const rawBody = req.rawBody ?? JSON.stringify(req.body);
 
   const result = await verifyHeader(authHeader, rawBody);
@@ -31,7 +35,6 @@ export async function ondcAuthMiddleware(req, res, next) {
     return res.status(401).json(nack('DOMAIN-ERROR', ErrCode.INVALID_SIGNATURE, result.error));
   }
 
-  // When a Gateway-forwarded request also carries X-Gateway-Authorization, verify that too
   if (gatewayHeader) {
     const gwResult = await verifyHeader(gatewayHeader, rawBody);
     if (!gwResult.ok) {
