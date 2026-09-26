@@ -16,4 +16,8 @@ export const ondcConfig = {
   // Skip inbound signature verification (for Workbench/Pramaan testing where
   // the sender's key may not be in the preprod registry)
   skipAuthVerification: process.env.ONDC_SKIP_AUTH_VERIFICATION === 'true',
+  workbenchMode: process.env.ONDC_WORKBENCH_MODE === 'true',
+  workbenchUrl:
+    process.env.ONDC_WORKBENCH_URL ||
+    'https://workbench.ondc.tech/api-service/ONDC:TRV11/2.0.0/seller/search',
 };
