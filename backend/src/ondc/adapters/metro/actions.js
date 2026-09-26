@@ -53,6 +53,8 @@ function searchSettlementTermsTags() {
 
 function initSettlementTermsTags(settlementAmount) {
   const list = [
+    { descriptor: { code: 'SETTLEMENT_WINDOW' }, value: 'PT60M' },
+    { descriptor: { code: 'SETTLEMENT_BASIS' }, value: 'Delivery' },
     { descriptor: { code: 'SETTLEMENT_TYPE' }, value: 'NEFT' },
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
     { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
