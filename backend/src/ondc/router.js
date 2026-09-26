@@ -111,11 +111,11 @@ makeCallbackRoute('on_support', handleOnSupport);
  * Response: { txnId }
  */
 ondcRouter.post('/api/search', async (req, res) => {
-  const { from, to } = req.body ?? {};
+  const { from, to, txnId: existingTxnId } = req.body ?? {};
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
 
-  const txnId = crypto.randomUUID();
-  createTransaction(txnId);
+  const txnId = existingTxnId || crypto.randomUUID();
+  if (!getTransaction(txnId)) createTransaction(txnId);
 
   const payload = buildSearch({ transactionId: txnId, from, to });
 
