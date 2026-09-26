@@ -39,13 +39,15 @@ function buyerFinderFeesTags() {
 //           (no SETTLEMENT_WINDOW, no SETTLEMENT_BASIS per init/example_0.yaml)
 // confirm:  all 8 sub-codes including SETTLEMENT_WINDOW='PT60M' and SETTLEMENT_BASIS='Delivery'
 
+function staticTermsValue() {
+  return ondcConfig.staticTermsUrl || 'https://github.com/ONDC-Official/protocol-network-extension/discussions/79';
+}
+
 function searchSettlementTermsTags() {
   const list = [
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
+    { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
   ];
-  if (ondcConfig.staticTermsUrl) {
-    list.push({ descriptor: { code: 'STATIC_TERMS' }, value: ondcConfig.staticTermsUrl });
-  }
   return [{ descriptor: { code: 'SETTLEMENT_TERMS' }, display: false, list }];
 }
 
@@ -55,10 +57,8 @@ function initSettlementTermsTags(settlementAmount) {
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
     { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
     { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
+    { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
   ];
-  if (ondcConfig.staticTermsUrl) {
-    list.push({ descriptor: { code: 'STATIC_TERMS' }, value: ondcConfig.staticTermsUrl });
-  }
   if (settlementAmount != null) {
     list.push({ descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount) });
   }
@@ -73,10 +73,8 @@ function confirmSettlementTermsTags(settlementAmount) {
     { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
     { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
+    { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
   ];
-  if (ondcConfig.staticTermsUrl) {
-    list.push({ descriptor: { code: 'STATIC_TERMS' }, value: ondcConfig.staticTermsUrl });
-  }
   if (settlementAmount != null) {
     list.push({ descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount) });
   }
@@ -87,6 +85,12 @@ function computeSettlementAmount(totalAmount) {
   if (totalAmount == null) return null;
   const feePct = Number(ondcConfig.buyerFinderFeesPct) / 100;
   return Math.floor(Number(totalAmount) * (1 - feePct)).toString();
+}
+
+// ── GPS normalization ────────────────────────────────────────────────────
+// Official TRV11 2.0.0 examples use "lat, lng" (space after comma).
+function normalizeGps(gps) {
+  return gps.replace(/,\s*/g, ', ');
 }
 
 // ── Action builders ───────────────────────────────────────────────────────────
@@ -105,7 +109,7 @@ export function buildSearch({ transactionId, from, to }) {
 
   const makeStop = (type, loc) => {
     const stop = { type, location: {} };
-    if (loc.gps) stop.location.gps = loc.gps;
+    if (loc.gps) stop.location.gps = normalizeGps(loc.gps);
     if (loc.code) stop.location.descriptor = { code: loc.code };
     if (loc.name && !loc.code) stop.location.descriptor = { name: loc.name };
     return stop;

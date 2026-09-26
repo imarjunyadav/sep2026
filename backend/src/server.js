@@ -8,6 +8,7 @@ import { ondcRouter, eventBus } from './ondc/router.js';
 import { siteVerificationHandler, onSubscribeHandler } from './ondc/onboard.js';
 import { ondcAuthMiddleware } from './ondc/core/authMiddleware.js';
 import { ack, nack, ErrCode } from './ondc/core/errors.js';
+import { logRequest } from './ondc/store/requestLog.js';
 import {
   handleOnSearch,
   handleOnSelect,
@@ -26,6 +27,41 @@ app.use(express.json({
   limit: '256kb',
   verify: (req, _res, buf) => { req.rawBody = buf; },
 }));
+
+// ── ONDC request/response logging ────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/on_') && !req.path.startsWith('/ondc')) return next();
+
+  const start = Date.now();
+  const reqId = Math.random().toString(36).slice(2, 8);
+
+  console.log(`[ondc:${reqId}] --> ${req.method} ${req.path}`,
+    JSON.stringify({
+      headers: { authorization: req.headers.authorization ? '[PRESENT]' : '[MISSING]' },
+      body: req.body,
+    }));
+
+  const origJson = res.json.bind(res);
+  res.json = (body) => {
+    const duration = Date.now() - start;
+    console.log(`[ondc:${reqId}] <-- ${res.statusCode} (${duration}ms)`,
+      JSON.stringify(body));
+    logRequest({
+      direction: 'inbound',
+      action: req.body?.context?.action ?? req.path.replace(/^\/+/, ''),
+      transactionId: req.body?.context?.transaction_id,
+      messageId: req.body?.context?.message_id,
+      url: req.originalUrl,
+      requestBody: req.body,
+      responseBody: body,
+      statusCode: res.statusCode,
+      durationMs: duration,
+    });
+    return origJson(body);
+  };
+
+  next();
+});
 
 app.use('/api', journeysRouter);
 app.use('/api', placesRouter);

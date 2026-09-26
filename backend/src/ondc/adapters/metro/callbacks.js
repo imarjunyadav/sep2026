@@ -12,6 +12,7 @@
 
 import {
   getTransaction,
+  createTransaction,
   updateTransaction,
   OrderStatus,
 } from '../../store/orderStore.js';
@@ -33,14 +34,23 @@ function validateContext(ctx, expectedAction) {
   return null;
 }
 
+function getOrCreateTransaction(txnId) {
+  let txn = getTransaction(txnId);
+  if (!txn) {
+    console.log(`[ondc/callback] Auto-creating transaction for external ID: ${txnId}`);
+    createTransaction(txnId);
+    txn = getTransaction(txnId);
+  }
+  return txn;
+}
+
 export function handleOnSearch(body, eventBus) {
   const ctx = body?.context;
   const err = validateContext(ctx, 'on_search');
   if (err) return { ok: false, error: err };
 
   const txnId = ctx.transaction_id;
-  const txn = getTransaction(txnId);
-  if (!txn) return { ok: false, error: `Unknown transaction_id: ${txnId}` };
+  const txn = getOrCreateTransaction(txnId);
 
   const options = parseOnSearch(body);
 
@@ -61,8 +71,7 @@ export function handleOnSelect(body, eventBus) {
   if (err) return { ok: false, error: err };
 
   const txnId = ctx.transaction_id;
-  const txn = getTransaction(txnId);
-  if (!txn) return { ok: false, error: `Unknown transaction_id: ${txnId}` };
+  const txn = getOrCreateTransaction(txnId);
 
   const parsed = parseOnSelect(body);
   if (!parsed) return { ok: false, error: 'Could not parse on_select order' };
@@ -82,8 +91,7 @@ export function handleOnInit(body, eventBus) {
   if (err) return { ok: false, error: err };
 
   const txnId = ctx.transaction_id;
-  const txn = getTransaction(txnId);
-  if (!txn) return { ok: false, error: `Unknown transaction_id: ${txnId}` };
+  const txn = getOrCreateTransaction(txnId);
 
   const parsed = parseOnInit(body);
   if (!parsed) return { ok: false, error: 'Could not parse on_init order' };
@@ -105,8 +113,7 @@ export function handleOnConfirm(body, eventBus) {
   if (err) return { ok: false, error: err };
 
   const txnId = ctx.transaction_id;
-  const txn = getTransaction(txnId);
-  if (!txn) return { ok: false, error: `Unknown transaction_id: ${txnId}` };
+  const txn = getOrCreateTransaction(txnId);
 
   const parsed = parseOnConfirm(body);
   if (!parsed) return { ok: false, error: 'Could not parse on_confirm order' };
@@ -128,8 +135,7 @@ export function handleOnStatus(body, eventBus) {
   if (err) return { ok: false, error: err };
 
   const txnId = ctx.transaction_id;
-  const txn = getTransaction(txnId);
-  if (!txn) return { ok: false, error: `Unknown transaction_id: ${txnId}` };
+  const txn = getOrCreateTransaction(txnId);
 
   const parsed = parseOnStatus(body);
   if (!parsed) return { ok: false, error: 'Could not parse on_status order' };

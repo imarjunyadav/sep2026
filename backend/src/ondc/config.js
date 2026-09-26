@@ -9,10 +9,11 @@ export const ondcConfig = {
   registryUrl: process.env.ONDC_REGISTRY_URL || 'https://preprod.registry.ondc.org',
   gatewayUrl: process.env.ONDC_GATEWAY_URL || 'https://preprod.gateway.ondc.org',
   env: process.env.ONDC_ENV || 'uat',
-  // When true, confirm uses a generated UUID as payment transaction_id (for Pramaan testing)
   mockPayment: process.env.ONDC_MOCK_PAYMENT === 'true',
-  // BUYER_FINDER_FEES from TRV11 2.0.0 spec examples (1% configurable)
   buyerFinderFeesPct: process.env.ONDC_BUYER_FINDER_FEES_PCT || '1',
   staticTermsUrl: process.env.ONDC_STATIC_TERMS_URL || null,
   courtJurisdiction: process.env.ONDC_COURT_JURISDICTION || 'Mumbai',
+  // Skip inbound signature verification (for Workbench/Pramaan testing where
+  // the sender's key may not be in the preprod registry)
+  skipAuthVerification: process.env.ONDC_SKIP_AUTH_VERIFICATION === 'true',
 };
