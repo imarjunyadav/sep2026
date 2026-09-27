@@ -129,6 +129,7 @@ ondcRouter.post('/api/search', async (req, res) => {
 
   const txnId = existingTxnId || crypto.randomUUID();
   if (!getTransaction(txnId)) createTransaction(txnId);
+  updateTransaction(txnId, { searchFrom: from, searchTo: to });
 
   const payload = buildSearch({ transactionId: txnId, from, to });
 
@@ -193,6 +194,28 @@ ondcRouter.post('/api/init', async (req, res) => {
     phone: '9999999999',
   };
 
+  const fulfillmentId = txn.selectedFulfillmentId
+    ?? txn.searchOptions?.find(o => o.itemId === resolvedItemId)?.fulfillmentId
+    ?? 'F1';
+
+  const fulfillments = [];
+  if (txn.searchFrom || txn.searchTo) {
+    const stops = [];
+    if (txn.searchFrom) {
+      const loc = {};
+      if (txn.searchFrom.gps) loc.gps = txn.searchFrom.gps;
+      if (txn.searchFrom.code) loc.descriptor = { code: txn.searchFrom.code };
+      stops.push({ type: 'START', location: loc });
+    }
+    if (txn.searchTo) {
+      const loc = {};
+      if (txn.searchTo.gps) loc.gps = txn.searchTo.gps;
+      if (txn.searchTo.code) loc.descriptor = { code: txn.searchTo.code };
+      stops.push({ type: 'END', location: loc });
+    }
+    fulfillments.push({ id: fulfillmentId, stops, vehicle: { category: 'METRO' } });
+  }
+
   const payload = buildInit({
     transactionId: txnId,
     bppId: txn.bppId,
@@ -203,6 +226,7 @@ ondcRouter.post('/api/init', async (req, res) => {
     billing: resolvedBilling,
     totalAmount: txn.quote?.totalAmount
       ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity),
+    fulfillments,
   });
 
   updateTransaction(txnId, {
