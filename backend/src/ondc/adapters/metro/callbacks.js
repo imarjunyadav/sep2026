@@ -160,3 +160,54 @@ export function handleOnSupport(body, eventBus) {
   eventBus.emit(txnId, { event: 'on_support', support });
   return { ok: true };
 }
+
+export function handleOnIssue(body, eventBus) {
+  const ctx = body?.context;
+  if (ctx?.action !== 'on_issue') return { ok: false, error: `Expected action on_issue, got ${ctx?.action}` };
+
+  const txnId = ctx.transaction_id;
+  const issue = body?.message?.issue;
+  if (!issue) return { ok: false, error: 'Missing message.issue' };
+
+  const txn = getOrCreateTransaction(txnId);
+
+  updateTransaction(txnId, {
+    igmIssue: {
+      id: issue.id,
+      status: issue.status,
+      issue_actions: issue.issue_actions,
+      resolution_provider: issue.resolution_provider,
+      created_at: issue.created_at,
+      updated_at: issue.updated_at,
+    },
+  });
+
+  eventBus.emit(txnId, { event: 'on_issue', issue });
+  return { ok: true };
+}
+
+export function handleOnIssueStatus(body, eventBus) {
+  const ctx = body?.context;
+  if (ctx?.action !== 'on_issue_status') return { ok: false, error: `Expected action on_issue_status, got ${ctx?.action}` };
+
+  const txnId = ctx.transaction_id;
+  const issue = body?.message?.issue;
+  if (!issue) return { ok: false, error: 'Missing message.issue' };
+
+  const txn = getOrCreateTransaction(txnId);
+
+  updateTransaction(txnId, {
+    igmIssue: {
+      id: issue.id,
+      status: issue.status,
+      issue_actions: issue.issue_actions,
+      resolution: issue.resolution,
+      resolution_provider: issue.resolution_provider,
+      created_at: issue.created_at,
+      updated_at: issue.updated_at,
+    },
+  });
+
+  eventBus.emit(txnId, { event: 'on_issue_status', issue });
+  return { ok: true };
+}

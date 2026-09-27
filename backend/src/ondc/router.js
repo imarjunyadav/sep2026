@@ -32,6 +32,8 @@ import {
   handleOnConfirm,
   handleOnStatus,
   handleOnSupport,
+  handleOnIssue,
+  handleOnIssueStatus,
 } from './adapters/metro/callbacks.js';
 
 import {
@@ -41,6 +43,8 @@ import {
   buildConfirm,
   buildStatus,
   buildSupport,
+  buildIssue,
+  buildIssueClose,
 } from './adapters/metro/actions.js';
 
 import {
@@ -109,6 +113,8 @@ makeCallbackRoute('on_init', handleOnInit);
 makeCallbackRoute('on_confirm', handleOnConfirm);
 makeCallbackRoute('on_status', handleOnStatus);
 makeCallbackRoute('on_support', handleOnSupport);
+makeCallbackRoute('on_issue', handleOnIssue);
+makeCallbackRoute('on_issue_status', handleOnIssueStatus);
 
 // ── Booking API ───────────────────────────────────────────────────────────────
 
@@ -291,6 +297,71 @@ ondcRouter.post('/api/support', async (req, res) => {
   try {
     const ackResp = await signedPost(`${txn.bppUri}/support`, payload);
     return res.json({ txnId, ack: ackResp });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /ondc/api/issue
+ * Body: { txnId, shortDesc?, longDesc? }
+ * Raises an IGM issue against the confirmed order.
+ */
+ondcRouter.post('/api/issue', async (req, res) => {
+  const { txnId, shortDesc, longDesc } = req.body ?? {};
+  const txn = getTransaction(txnId);
+  if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  if (!txn.orderId) return res.status(409).json({ error: 'Order not confirmed yet' });
+
+  const payload = buildIssue({
+    transactionId: txnId,
+    bppId: txn.bppId,
+    bppUri: txn.bppUri,
+    orderId: txn.orderId,
+    providerId: txn.selectedProviderId,
+    itemId: txn.selectedItemId,
+    fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
+    billing: txn.billing,
+    shortDesc,
+    longDesc,
+  });
+
+  updateTransaction(txnId, {
+    igmIssue: { id: payload.message.issue.id, status: 'OPEN' },
+  });
+
+  try {
+    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    return res.json({ txnId, issueId: payload.message.issue.id, ack: ackResp });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /ondc/api/issue-close
+ * Body: { txnId, issueId? }
+ * Closes a resolved IGM issue.
+ */
+ondcRouter.post('/api/issue-close', async (req, res) => {
+  const { txnId, issueId } = req.body ?? {};
+  const txn = getTransaction(txnId);
+  if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+
+  const resolvedIssueId = issueId ?? txn.igmIssue?.id;
+  if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to close' });
+
+  const payload = buildIssueClose({
+    transactionId: txnId,
+    bppId: txn.bppId,
+    bppUri: txn.bppUri,
+    issueId: resolvedIssueId,
+    billing: txn.billing,
+  });
+
+  try {
+    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    return res.json({ txnId, issueId: resolvedIssueId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
   }
