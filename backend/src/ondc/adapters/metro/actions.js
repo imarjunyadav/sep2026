@@ -60,10 +60,8 @@ function initSettlementTermsTags(settlementAmount) {
     { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
     { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
     { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
+    { descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount ?? '0') },
   ];
-  if (settlementAmount != null) {
-    list.push({ descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount) });
-  }
   return [{ descriptor: { code: 'SETTLEMENT_TERMS' }, display: false, list }];
 }
 

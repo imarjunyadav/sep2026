@@ -40,11 +40,13 @@ export function parseOnSearch(body) {
       const fareCurrency = item.price?.currency ?? 'INR';
       const validityDuration = item.time?.duration ?? null;
 
-      for (const fId of item.fulfillment_ids ?? [item.fulfillment_id].filter(Boolean)) {
-        const ful = fulfillmentMap.get(fId);
-        if (!ful) continue;
+      const fIds = item.fulfillment_ids ?? [item.fulfillment_id].filter(Boolean);
+      if (fIds.length === 0) fIds.push(null);
 
-        const stops = ful.stops ?? [];
+      for (const fId of fIds) {
+        const ful = fId ? fulfillmentMap.get(fId) : null;
+
+        const stops = ful?.stops ?? [];
         const startStop = stops.find(s => s.type === 'START');
         const endStop = stops.find(s => s.type === 'END');
 
