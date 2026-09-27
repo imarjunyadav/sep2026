@@ -185,8 +185,9 @@ ondcRouter.post('/api/init', async (req, res) => {
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
 
-  const resolvedProviderId = providerId ?? txn.selectedProviderId;
-  const resolvedItemId = itemId ?? txn.selectedItemId;
+  const firstOption = txn.searchOptions?.[0];
+  const resolvedProviderId = providerId ?? txn.selectedProviderId ?? firstOption?.providerId;
+  const resolvedItemId = itemId ?? txn.selectedItemId ?? firstOption?.itemId;
   const resolvedQuantity = quantity ?? txn.selectedQuantity ?? 1;
   const resolvedBilling = billing ?? txn.billing ?? {
     name: 'Arjun Yadav',
