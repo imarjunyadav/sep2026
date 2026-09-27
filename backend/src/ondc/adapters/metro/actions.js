@@ -280,3 +280,110 @@ export function buildSupport({ transactionId, bppId, bppUri, refId }) {
     message: { ref_id: refId },
   };
 }
+
+/**
+ * Build an IGM issue message (raise a new issue).
+ * IGM v1.0.0 — used after order completion to report problems.
+ */
+export function buildIssue({
+  transactionId,
+  bppId,
+  bppUri,
+  orderId,
+  providerId,
+  itemId,
+  fulfillmentId,
+  billing,
+  shortDesc = 'Issue with metro ticket',
+  longDesc = 'Complaint regarding metro service',
+}) {
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const now = new Date().toISOString();
+  const issueId = crypto.randomUUID();
+
+  return {
+    context,
+    message: {
+      issue: {
+        id: issueId,
+        category: 'ORDER',
+        sub_category: 'ORD01',
+        complainant_info: {
+          person: { name: billing?.name ?? 'Consumer' },
+          contact: {
+            phone: billing?.phone ?? '9999999999',
+            email: billing?.email ?? 'consumer@example.com',
+          },
+        },
+        order_details: {
+          id: orderId,
+          state: 'Completed',
+          items: [{ id: itemId, quantity: 1 }],
+          fulfillments: [{ id: fulfillmentId ?? 'F1', state: 'INACTIVE' }],
+          provider_id: providerId,
+        },
+        description: {
+          short_desc: shortDesc,
+          long_desc: longDesc,
+          images: [],
+        },
+        source: {
+          network_participant_id: ondcConfig.subscriberId,
+          type: 'CONSUMER',
+        },
+        expected_response_time: { duration: 'PT1H' },
+        expected_resolution_time: { duration: 'P1D' },
+        status: 'OPEN',
+        issue_type: 'ISSUE',
+        created_at: now,
+        updated_at: now,
+      },
+    },
+  };
+}
+
+/**
+ * Build an IGM issue-close message.
+ * Sent by BAP to close a resolved issue.
+ */
+export function buildIssueClose({
+  transactionId,
+  bppId,
+  bppUri,
+  issueId,
+  billing,
+}) {
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const now = new Date().toISOString();
+
+  return {
+    context,
+    message: {
+      issue: {
+        id: issueId,
+        status: 'CLOSED',
+        issue_type: 'ISSUE',
+        rating: 'THUMBS-UP',
+        issue_actions: {
+          complainant_actions: [
+            {
+              complainant_action: 'CLOSE',
+              short_desc: 'Closing the issue',
+              updated_at: now,
+              updated_by: {
+                org: { name: ondcConfig.subscriberId },
+                contact: {
+                  phone: billing?.phone ?? '9999999999',
+                  email: billing?.email ?? 'consumer@example.com',
+                },
+                person: { name: billing?.name ?? 'Consumer' },
+              },
+            },
+          ],
+        },
+        created_at: now,
+        updated_at: now,
+      },
+    },
+  };
+}
