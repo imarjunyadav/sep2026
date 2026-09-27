@@ -257,17 +257,24 @@ ondcRouter.post('/api/confirm', async (req, res) => {
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
 
+  const firstOption = txn.searchOptions?.[0];
+  const resolvedProviderId = txn.selectedProviderId ?? firstOption?.providerId;
+  const resolvedItemId = txn.selectedItemId ?? firstOption?.itemId;
+  const resolvedQuantity = txn.selectedQuantity ?? 1;
+  const totalAmount = txn.quote?.totalAmount
+    ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity);
+
   const payload = buildConfirm({
     transactionId: txnId,
     bppId: txn.bppId,
     bppUri: txn.bppUri,
-    providerId: txn.selectedProviderId,
-    itemId: txn.selectedItemId,
-    quantity: txn.selectedQuantity ?? 1,
+    providerId: resolvedProviderId,
+    itemId: resolvedItemId,
+    quantity: resolvedQuantity,
     billing: txn.billing,
     onInitPayment: txn.payment,
     paymentTransactionId,
-    totalAmount: txn.quote?.totalAmount,
+    totalAmount,
   });
 
   try {
