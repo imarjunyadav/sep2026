@@ -74,8 +74,10 @@ function confirmSettlementTermsTags(settlementAmount) {
     { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
     { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
-    { descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount ?? '0') },
   ];
+  if (settlementAmount != null) {
+    list.push({ descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount) });
+  }
   return [{ descriptor: { code: 'SETTLEMENT_TERMS' }, display: false, list }];
 }
 
@@ -154,32 +156,33 @@ export function buildSelect({ transactionId, bppId, bppUri, providerId, itemId, 
  *
  * @param {string|null} totalAmount  Total fare from on_select quote (used for SETTLEMENT_AMOUNT).
  */
-export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount }) {
+export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount, fulfillments }) {
   const context = buildContext({ action: 'init', transactionId, bppId, bppUri });
   const settlementAmt = computeSettlementAmount(totalAmount);
 
-  return {
-    context,
-    message: {
-      order: {
-        provider: { id: providerId },
-        items: [{ id: itemId, quantity: { selected: { count: quantity } } }],
-        billing: {
-          name: billing.name,
-          email: billing.email,
-          phone: billing.phone,
-        },
-        payments: [
-          {
-            collected_by: 'BAP',
-            status: 'NOT-PAID',
-            type: 'PRE-ORDER',
-            tags: [...buyerFinderFeesTags(), ...initSettlementTermsTags(settlementAmt)],
-          },
-        ],
-      },
+  const order = {
+    provider: { id: providerId },
+    items: [{ id: itemId, quantity: { selected: { count: quantity } } }],
+    billing: {
+      name: billing.name,
+      email: billing.email,
+      phone: billing.phone,
     },
+    payments: [
+      {
+        collected_by: 'BAP',
+        status: 'NOT-PAID',
+        type: 'PRE-ORDER',
+        tags: [...buyerFinderFeesTags(), ...initSettlementTermsTags(settlementAmt)],
+      },
+    ],
   };
+
+  if (fulfillments?.length) {
+    order.fulfillments = fulfillments;
+  }
+
+  return { context, message: { order } };
 }
 
 /**
