@@ -164,27 +164,34 @@ ondcRouter.post('/api/select', async (req, res) => {
 
 /**
  * POST /ondc/api/init
- * Body: { txnId, billing: { name, email, phone } }
+ * Body: { txnId, billing: { name, email, phone }, providerId?, itemId?, quantity? }
  */
 ondcRouter.post('/api/init', async (req, res) => {
-  const { txnId, billing } = req.body ?? {};
+  const { txnId, billing, providerId, itemId, quantity } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+
+  const resolvedProviderId = providerId ?? txn.selectedProviderId;
+  const resolvedItemId = itemId ?? txn.selectedItemId;
+  const resolvedQuantity = quantity ?? txn.selectedQuantity ?? 1;
 
   const payload = buildInit({
     transactionId: txnId,
     bppId: txn.bppId,
     bppUri: txn.bppUri,
-    providerId: txn.selectedProviderId,
-    itemId: txn.selectedItemId,
-    quantity: txn.selectedQuantity ?? 1,
+    providerId: resolvedProviderId,
+    itemId: resolvedItemId,
+    quantity: resolvedQuantity,
     billing,
     totalAmount: txn.quote?.totalAmount ?? null,
   });
 
-  // Store billing now so buildConfirm() can use txn.billing regardless of whether
-  // the BPP echoes it back in on_init.
-  updateTransaction(txnId, { billing });
+  updateTransaction(txnId, {
+    billing,
+    selectedProviderId: resolvedProviderId,
+    selectedItemId: resolvedItemId,
+    selectedQuantity: resolvedQuantity,
+  });
 
   try {
     const ackResp = await signedPost(`${txn.bppUri}/init`, payload);
