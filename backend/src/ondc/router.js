@@ -181,6 +181,11 @@ ondcRouter.post('/api/init', async (req, res) => {
   const resolvedProviderId = providerId ?? txn.selectedProviderId;
   const resolvedItemId = itemId ?? txn.selectedItemId;
   const resolvedQuantity = quantity ?? txn.selectedQuantity ?? 1;
+  const resolvedBilling = billing ?? txn.billing ?? {
+    name: 'Arjun Yadav',
+    email: 'arsenal6389@gmail.com',
+    phone: '9999999999',
+  };
 
   const payload = buildInit({
     transactionId: txnId,
@@ -189,13 +194,13 @@ ondcRouter.post('/api/init', async (req, res) => {
     providerId: resolvedProviderId,
     itemId: resolvedItemId,
     quantity: resolvedQuantity,
-    billing,
+    billing: resolvedBilling,
     totalAmount: txn.quote?.totalAmount
       ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity),
   });
 
   updateTransaction(txnId, {
-    billing,
+    billing: resolvedBilling,
     selectedProviderId: resolvedProviderId,
     selectedItemId: resolvedItemId,
     selectedQuantity: resolvedQuantity,
