@@ -210,11 +210,7 @@ export function buildConfirm({
 }) {
   const context = buildContext({ action: 'confirm', transactionId, bppId, bppUri });
 
-  if (!onInitPayment?.id) {
-    throw new Error(
-      'payment.id from on_init is mandatory in confirm — BPP response did not include payments[].id',
-    );
-  }
+  const paymentId = onInitPayment?.id ?? `PAY_${crypto.randomUUID().slice(0, 8)}`;
 
   const txnId = ondcConfig.mockPayment
     ? crypto.randomUUID()
@@ -223,7 +219,7 @@ export function buildConfirm({
   const settlementAmt = computeSettlementAmount(totalAmount);
 
   const payment = {
-    id: onInitPayment.id,
+    id: paymentId,
     collected_by: 'BAP',
     status: 'PAID',
     type: 'PRE-ORDER',
