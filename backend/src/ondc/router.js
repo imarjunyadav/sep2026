@@ -75,6 +75,13 @@ export const eventBus = {
   },
 };
 
+function deriveAmountFromSearch(searchOptions, itemId, quantity) {
+  if (!searchOptions?.length) return null;
+  const match = searchOptions.find(o => o.itemId === itemId);
+  if (!match?.fareValue) return null;
+  return String(Number(match.fareValue) * (quantity ?? 1));
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export const ondcRouter = Router();
@@ -183,7 +190,8 @@ ondcRouter.post('/api/init', async (req, res) => {
     itemId: resolvedItemId,
     quantity: resolvedQuantity,
     billing,
-    totalAmount: txn.quote?.totalAmount ?? null,
+    totalAmount: txn.quote?.totalAmount
+      ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity),
   });
 
   updateTransaction(txnId, {
