@@ -279,6 +279,13 @@ ondcRouter.post('/api/confirm', async (req, res) => {
 
   try {
     const ackResp = await signedPost(`${txn.bppUri}/confirm`, payload);
+    if (!txn.orderId) {
+      updateTransaction(txnId, {
+        orderId: txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`,
+        selectedProviderId: resolvedProviderId,
+        selectedItemId: resolvedItemId,
+      });
+    }
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -293,13 +300,14 @@ ondcRouter.post('/api/status', async (req, res) => {
   const { txnId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
-  if (!txn.orderId) return res.status(409).json({ error: 'Order not confirmed yet' });
+  const orderId = txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`;
+  if (!txn.orderId) updateTransaction(txnId, { orderId });
 
   const payload = buildStatus({
     transactionId: txnId,
     bppId: txn.bppId,
     bppUri: txn.bppUri,
-    orderId: txn.orderId,
+    orderId,
   });
 
   try {
@@ -343,15 +351,17 @@ ondcRouter.post('/api/issue', async (req, res) => {
   const { txnId, shortDesc, longDesc } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
-  if (!txn.orderId) return res.status(409).json({ error: 'Order not confirmed yet' });
+  const firstOption = txn.searchOptions?.[0];
+  const orderId = txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`;
+  if (!txn.orderId) updateTransaction(txnId, { orderId });
 
   const payload = buildIssue({
     transactionId: txnId,
     bppId: txn.bppId,
     bppUri: txn.bppUri,
-    orderId: txn.orderId,
-    providerId: txn.selectedProviderId,
-    itemId: txn.selectedItemId,
+    orderId,
+    providerId: txn.selectedProviderId ?? firstOption?.providerId,
+    itemId: txn.selectedItemId ?? firstOption?.itemId,
     fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
     billing: txn.billing,
     shortDesc,
