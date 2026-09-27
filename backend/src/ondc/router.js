@@ -164,7 +164,7 @@ ondcRouter.post('/api/select', async (req, res) => {
 
 /**
  * POST /ondc/api/init
- * Body: { txnId, billing: { name, email, phone } }
+ * Body: { txnId, billing: { name, email, phone }, providerId?, itemId?, quantity? }
  */
 ondcRouter.post('/api/init', async (req, res) => {
   const { txnId, billing, providerId, itemId, quantity } = req.body ?? {};
