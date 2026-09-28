@@ -341,6 +341,47 @@ export function buildIssue({
  * Build an IGM issue-close message.
  * Sent by BAP to close a resolved issue.
  */
+export function buildIssueEscalate({
+  transactionId,
+  bppId,
+  bppUri,
+  issueId,
+  billing,
+}) {
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const now = new Date().toISOString();
+
+  return {
+    context,
+    message: {
+      issue: {
+        id: issueId,
+        status: 'OPEN',
+        issue_type: 'ISSUE',
+        issue_actions: {
+          complainant_actions: [
+            {
+              complainant_action: 'ESCALATE',
+              short_desc: 'Escalating the issue',
+              updated_at: now,
+              updated_by: {
+                org: { name: ondcConfig.subscriberId },
+                contact: {
+                  phone: billing?.phone ?? '9999999999',
+                  email: billing?.email ?? 'consumer@example.com',
+                },
+                person: { name: billing?.name ?? 'Consumer' },
+              },
+            },
+          ],
+        },
+        created_at: now,
+        updated_at: now,
+      },
+    },
+  };
+}
+
 export function buildIssueClose({
   transactionId,
   bppId,

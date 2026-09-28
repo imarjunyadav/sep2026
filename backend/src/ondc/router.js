@@ -44,6 +44,7 @@ import {
   buildStatus,
   buildSupport,
   buildIssue,
+  buildIssueEscalate,
   buildIssueClose,
 } from './adapters/metro/actions.js';
 
@@ -375,6 +376,35 @@ ondcRouter.post('/api/issue', async (req, res) => {
   try {
     const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
     return res.json({ txnId, issueId: payload.message.issue.id, ack: ackResp });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /ondc/api/issue-escalate
+ * Body: { txnId, issueId? }
+ * Escalates an IGM issue when BPP takes no action (IGM 2.0.0).
+ */
+ondcRouter.post('/api/issue-escalate', async (req, res) => {
+  const { txnId, issueId } = req.body ?? {};
+  const txn = getTransaction(txnId);
+  if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+
+  const resolvedIssueId = issueId ?? txn.igmIssue?.id;
+  if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to escalate' });
+
+  const payload = buildIssueEscalate({
+    transactionId: txnId,
+    bppId: txn.bppId,
+    bppUri: txn.bppUri,
+    issueId: resolvedIssueId,
+    billing: txn.billing,
+  });
+
+  try {
+    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    return res.json({ txnId, issueId: resolvedIssueId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
   }
