@@ -394,6 +394,7 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
   const resolvedIssueId = issueId ?? txn.igmIssue?.id;
   if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to escalate' });
 
+  const firstOption = txn.searchOptions?.[0];
   const payload = buildIssueEscalate({
     transactionId: txnId,
     bppId: txn.bppId,
@@ -401,9 +402,9 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
     issueId: resolvedIssueId,
     billing: txn.billing,
     orderId: txn.orderId,
-    providerId: txn.providerId,
-    itemId: txn.itemId,
-    fulfillmentId: txn.fulfillmentId,
+    providerId: txn.selectedProviderId ?? firstOption?.providerId,
+    itemId: txn.selectedItemId ?? firstOption?.itemId,
+    fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
   });
 
   try {
@@ -427,6 +428,7 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
   const resolvedIssueId = issueId ?? txn.igmIssue?.id;
   if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to close' });
 
+  const firstOption = txn.searchOptions?.[0];
   const payload = buildIssueClose({
     transactionId: txnId,
     bppId: txn.bppId,
@@ -434,9 +436,9 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
     issueId: resolvedIssueId,
     billing: txn.billing,
     orderId: txn.orderId,
-    providerId: txn.providerId,
-    itemId: txn.itemId,
-    fulfillmentId: txn.fulfillmentId,
+    providerId: txn.selectedProviderId ?? firstOption?.providerId,
+    itemId: txn.selectedItemId ?? firstOption?.itemId,
+    fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
   });
 
   try {
