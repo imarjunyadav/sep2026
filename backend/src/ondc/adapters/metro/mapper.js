@@ -155,6 +155,59 @@ export function parseOnStatus(body) {
   return parseOnConfirm(body); // same structure
 }
 
+/**
+ * Parse on_update into partial-cancellation state.
+ *
+ * After SOFT_CANCEL: order.status = 'SOFT_CANCEL', quote has REFUND + CANCELLATION_CHARGES
+ * After CONFIRM_CANCEL: order.status = 'ACTIVE', cancelled fulfillment has state CANCELLED
+ */
+export function parseOnUpdate(body) {
+  const order = body?.message?.order;
+  if (!order) return null;
+
+  const quote = order.quote ?? null;
+  const payment = (order.payments ?? [])[0] ?? null;
+
+  const fulfillments = (order.fulfillments ?? []).map(f => ({
+    id: f.id,
+    type: f.type,
+    state: f.state?.descriptor?.code ?? null,
+    stops: (f.stops ?? []).map(s => ({
+      type: s.type,
+      stationName: s.location?.descriptor?.name ?? null,
+      stationCode: s.location?.descriptor?.code ?? null,
+    })),
+  }));
+
+  return {
+    orderId: order.id,
+    orderStatus: order.status,
+    items: (order.items ?? []).map(item => ({
+      id: item.id,
+      name: item.descriptor?.name ?? null,
+      code: item.descriptor?.code ?? null,
+      price: item.price?.value ?? null,
+      quantity: item.quantity?.selected?.count ?? null,
+      fulfillmentIds: item.fulfillment_ids ?? [],
+    })),
+    fulfillments,
+    quote: quote ? {
+      totalAmount: quote.price?.value ?? null,
+      currency: quote.price?.currency ?? 'INR',
+      breakup: (quote.breakup ?? []).map(b => ({
+        title: b.title,
+        amount: b.price?.value,
+        currency: b.price?.currency ?? 'INR',
+        itemId: b.item?.id ?? null,
+        itemQuantity: b.item?.quantity?.selected?.count ?? null,
+        fulfillmentIds: b.item?.fulfillment_ids ?? [],
+      })),
+    } : null,
+    payment,
+    cancellationTerms: order.cancellation_terms ?? null,
+  };
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function buildFulfillmentMap(fulfillments) {

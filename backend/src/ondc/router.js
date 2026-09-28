@@ -31,6 +31,7 @@ import {
   handleOnInit,
   handleOnConfirm,
   handleOnStatus,
+  handleOnUpdate,
   handleOnSupport,
   handleOnIssue,
   handleOnIssueStatus,
@@ -42,6 +43,7 @@ import {
   buildInit,
   buildConfirm,
   buildStatus,
+  buildUpdate,
   buildSupport,
   buildIssue,
   buildIssueEscalate,
@@ -113,6 +115,7 @@ makeCallbackRoute('on_select', handleOnSelect);
 makeCallbackRoute('on_init', handleOnInit);
 makeCallbackRoute('on_confirm', handleOnConfirm);
 makeCallbackRoute('on_status', handleOnStatus);
+makeCallbackRoute('on_update', handleOnUpdate);
 makeCallbackRoute('on_support', handleOnSupport);
 makeCallbackRoute('on_issue', handleOnIssue);
 makeCallbackRoute('on_issue_status', handleOnIssueStatus);
@@ -313,6 +316,43 @@ ondcRouter.post('/api/status', async (req, res) => {
 
   try {
     const ackResp = await signedPost(`${txn.bppUri}/status`, payload);
+    return res.json({ txnId, ack: ackResp });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /ondc/api/update
+ * Body: { txnId, fulfillmentId, cancelType }
+ *
+ * cancelType: 'SOFT_CANCEL' (step 1 — get cancellation charges)
+ *          or 'CONFIRM_CANCEL' (step 2 — confirm partial cancellation)
+ * fulfillmentId: the specific fulfillment to cancel (e.g. 'F2')
+ */
+ondcRouter.post('/api/update', async (req, res) => {
+  const { txnId, fulfillmentId, cancelType, reasonId } = req.body ?? {};
+  const txn = getTransaction(txnId);
+  if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+
+  const orderId = txn.orderId;
+  if (!orderId) return res.status(409).json({ error: 'No confirmed order. Run confirm first.' });
+
+  const resolvedFulfillmentId = fulfillmentId ?? txn.selectedFulfillmentId ?? 'F1';
+  const resolvedCancelType = cancelType ?? 'SOFT_CANCEL';
+
+  const payload = buildUpdate({
+    transactionId: txnId,
+    bppId: txn.bppId,
+    bppUri: txn.bppUri,
+    orderId,
+    fulfillmentId: resolvedFulfillmentId,
+    cancelType: resolvedCancelType,
+    reasonId: reasonId ?? '001',
+  });
+
+  try {
+    const ackResp = await signedPost(`${txn.bppUri}/update`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });

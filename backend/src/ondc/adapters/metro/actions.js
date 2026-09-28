@@ -280,6 +280,52 @@ export function buildSupport({ transactionId, bppId, bppUri, refId }) {
  * Build an IGM issue message (raise a new issue).
  * IGM v1.0.0 — used after order completion to report problems.
  */
+/**
+ * Build an update message for partial cancellation.
+ * TRV11 2.0.0 update/update_request_soft_cancel.yaml / update_request_confirm_cancel.yaml
+ *
+ * Two-step process:
+ *   Step 1: cancelType = 'SOFT_CANCEL'  — request cancellation charges
+ *   Step 2: cancelType = 'CONFIRM_CANCEL' — confirm the partial cancellation
+ *
+ * @param {string} cancelType  'SOFT_CANCEL' or 'CONFIRM_CANCEL'
+ * @param {string} fulfillmentId  The fulfillment to cancel (e.g. 'F2')
+ */
+export function buildUpdate({
+  transactionId,
+  bppId,
+  bppUri,
+  orderId,
+  fulfillmentId,
+  cancelType = 'SOFT_CANCEL',
+  reasonId = '001',
+}) {
+  const context = buildContext({ action: 'update', transactionId, bppId, bppUri });
+  return {
+    context,
+    message: {
+      update_target: 'order.fulfillments',
+      order: {
+        id: orderId,
+        fulfillments: [
+          {
+            id: fulfillmentId,
+            type: 'TRIP',
+          },
+        ],
+        cancellation: {
+          reason: {
+            id: reasonId,
+            descriptor: {
+              code: cancelType,
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 export function buildIssue({
   transactionId,
   bppId,

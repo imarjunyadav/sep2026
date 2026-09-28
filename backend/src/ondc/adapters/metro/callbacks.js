@@ -22,6 +22,7 @@ import {
   parseOnInit,
   parseOnConfirm,
   parseOnStatus,
+  parseOnUpdate,
 } from './mapper.js';
 
 const EXPECTED_DOMAIN = 'ONDC:TRV11';
@@ -146,6 +147,32 @@ export function handleOnStatus(body, eventBus) {
   });
 
   eventBus.emit(txnId, { event: 'on_status', orderStatus: parsed.orderStatus, tickets: parsed.tickets });
+  return { ok: true };
+}
+
+export function handleOnUpdate(body, eventBus) {
+  const ctx = body?.context;
+  const err = validateContext(ctx, 'on_update');
+  if (err) return { ok: false, error: err };
+
+  const txnId = ctx.transaction_id;
+  const txn = getOrCreateTransaction(txnId);
+
+  const parsed = parseOnUpdate(body);
+  if (!parsed) return { ok: false, error: 'Could not parse on_update order' };
+
+  updateTransaction(txnId, {
+    orderStatus: parsed.orderStatus,
+    quote: parsed.quote,
+    ticket: { tickets: txn.ticket?.tickets ?? [], payment: parsed.payment },
+  });
+
+  eventBus.emit(txnId, {
+    event: 'on_update',
+    orderStatus: parsed.orderStatus,
+    fulfillments: parsed.fulfillments,
+    quote: parsed.quote,
+  });
   return { ok: true };
 }
 
