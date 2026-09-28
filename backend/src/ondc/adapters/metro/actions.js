@@ -226,7 +226,7 @@ export function buildConfirm({
     params: {
       transaction_id: txnId,
       currency: 'INR',
-      amount: totalAmount,
+      amount: totalAmount ?? '0',
       ...(onInitPayment?.params?.bank_code && { bank_code: onInitPayment.params.bank_code }),
       ...(onInitPayment?.params?.bank_account_number && {
         bank_account_number: onInitPayment.params.bank_account_number,
