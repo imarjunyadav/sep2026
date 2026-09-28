@@ -161,14 +161,18 @@ ondcRouter.post('/api/select', async (req, res) => {
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
   if (!txn.bppUri) return res.status(409).json({ error: 'No BPP selected yet. Wait for on_search.' });
 
-  updateTransaction(txnId, { selectedProviderId: providerId, selectedItemId: itemId });
+  const firstOption = txn.searchOptions?.[0];
+  const resolvedProviderId = providerId ?? firstOption?.providerId;
+  const resolvedItemId = itemId ?? firstOption?.itemId;
+
+  updateTransaction(txnId, { selectedProviderId: resolvedProviderId, selectedItemId: resolvedItemId });
 
   const payload = buildSelect({
     transactionId: txnId,
     bppId: txn.bppId,
     bppUri: txn.bppUri,
-    providerId,
-    itemId,
+    providerId: resolvedProviderId,
+    itemId: resolvedItemId,
     quantity: quantity ?? 1,
   });
 
