@@ -324,7 +324,7 @@ export function buildIssue({
             url: 'https://cityone.in/issues',
             content_type: 'text/html',
           },
-          images: [{ url: 'https://cityone.in/issues/screenshot.png' }],
+          images: ['https://cityone.in/issues/screenshot.png'],
         },
         source: {
           network_participant_id: ondcConfig.subscriberId,
@@ -389,7 +389,7 @@ export function buildIssueEscalate({
             url: 'https://cityone.in/issues',
             content_type: 'text/html',
           },
-          images: [{ url: 'https://cityone.in/issues/screenshot.png' }],
+          images: ['https://cityone.in/issues/screenshot.png'],
         },
         source: {
           network_participant_id: ondcConfig.subscriberId,
@@ -467,7 +467,7 @@ export function buildIssueClose({
             url: 'https://cityone.in/issues',
             content_type: 'text/html',
           },
-          images: [{ url: 'https://cityone.in/issues/screenshot.png' }],
+          images: ['https://cityone.in/issues/screenshot.png'],
         },
         source: {
           network_participant_id: ondcConfig.subscriberId,
