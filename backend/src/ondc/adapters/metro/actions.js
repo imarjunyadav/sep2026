@@ -320,6 +320,10 @@ export function buildIssue({
         description: {
           short_desc: shortDesc,
           long_desc: longDesc,
+          additional_desc: {
+            url: 'https://cityone.in/issues',
+            content_type: 'text/html',
+          },
           images: [],
         },
         source: {
@@ -347,6 +351,12 @@ export function buildIssueEscalate({
   bppUri,
   issueId,
   billing,
+  orderId,
+  providerId,
+  itemId,
+  fulfillmentId,
+  shortDesc = 'Issue with metro ticket',
+  longDesc = 'Complaint regarding metro service',
 }) {
   const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
   const now = new Date().toISOString();
@@ -356,6 +366,37 @@ export function buildIssueEscalate({
     message: {
       issue: {
         id: issueId,
+        category: 'ORDER',
+        sub_category: 'ORD01',
+        complainant_info: {
+          person: { name: billing?.name ?? 'Consumer' },
+          contact: {
+            phone: billing?.phone ?? '9999999999',
+            email: billing?.email ?? 'consumer@example.com',
+          },
+        },
+        order_details: {
+          id: orderId,
+          state: 'Completed',
+          items: [{ id: itemId, quantity: 1 }],
+          fulfillments: [{ id: fulfillmentId ?? 'F1', state: 'INACTIVE' }],
+          provider_id: providerId,
+        },
+        description: {
+          short_desc: shortDesc,
+          long_desc: longDesc,
+          additional_desc: {
+            url: 'https://cityone.in/issues',
+            content_type: 'text/html',
+          },
+          images: [],
+        },
+        source: {
+          network_participant_id: ondcConfig.subscriberId,
+          type: 'CONSUMER',
+        },
+        expected_response_time: { duration: 'PT1H' },
+        expected_resolution_time: { duration: 'P1D' },
         status: 'OPEN',
         issue_type: 'ISSUE',
         issue_actions: {
@@ -388,6 +429,12 @@ export function buildIssueClose({
   bppUri,
   issueId,
   billing,
+  orderId,
+  providerId,
+  itemId,
+  fulfillmentId,
+  shortDesc = 'Issue with metro ticket',
+  longDesc = 'Complaint regarding metro service',
 }) {
   const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
   const now = new Date().toISOString();
@@ -397,6 +444,37 @@ export function buildIssueClose({
     message: {
       issue: {
         id: issueId,
+        category: 'ORDER',
+        sub_category: 'ORD01',
+        complainant_info: {
+          person: { name: billing?.name ?? 'Consumer' },
+          contact: {
+            phone: billing?.phone ?? '9999999999',
+            email: billing?.email ?? 'consumer@example.com',
+          },
+        },
+        order_details: {
+          id: orderId,
+          state: 'Completed',
+          items: [{ id: itemId, quantity: 1 }],
+          fulfillments: [{ id: fulfillmentId ?? 'F1', state: 'INACTIVE' }],
+          provider_id: providerId,
+        },
+        description: {
+          short_desc: shortDesc,
+          long_desc: longDesc,
+          additional_desc: {
+            url: 'https://cityone.in/issues',
+            content_type: 'text/html',
+          },
+          images: [],
+        },
+        source: {
+          network_participant_id: ondcConfig.subscriberId,
+          type: 'CONSUMER',
+        },
+        expected_response_time: { duration: 'PT1H' },
+        expected_resolution_time: { duration: 'P1D' },
         status: 'CLOSED',
         issue_type: 'ISSUE',
         rating: 'THUMBS-UP',

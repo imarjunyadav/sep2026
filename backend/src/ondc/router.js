@@ -400,6 +400,10 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
     bppUri: txn.bppUri,
     issueId: resolvedIssueId,
     billing: txn.billing,
+    orderId: txn.orderId,
+    providerId: txn.providerId,
+    itemId: txn.itemId,
+    fulfillmentId: txn.fulfillmentId,
   });
 
   try {
@@ -429,6 +433,10 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
     bppUri: txn.bppUri,
     issueId: resolvedIssueId,
     billing: txn.billing,
+    orderId: txn.orderId,
+    providerId: txn.providerId,
+    itemId: txn.itemId,
+    fulfillmentId: txn.fulfillmentId,
   });
 
   try {
