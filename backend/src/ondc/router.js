@@ -45,6 +45,7 @@ import {
   buildConfirm,
   buildStatus,
   buildUpdate,
+  buildCancel,
   buildSupport,
   buildIssue,
   buildIssueEscalate,
@@ -359,6 +360,34 @@ ondcRouter.post('/api/update', async (req, res) => {
 
   try {
     const ackResp = await signedPost(`${txn.bppUri}/update`, payload);
+    return res.json({ txnId, ack: ackResp });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /ondc/api/cancel
+ * Body: { txnId, reasonId? }
+ */
+ondcRouter.post('/api/cancel', async (req, res) => {
+  const { txnId, reasonId } = req.body ?? {};
+  const txn = getTransaction(txnId);
+  if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+
+  const orderId = txn.orderId;
+  if (!orderId) return res.status(409).json({ error: 'No confirmed order. Run confirm first.' });
+
+  const payload = buildCancel({
+    transactionId: txnId,
+    bppId: txn.bppId,
+    bppUri: txn.bppUri,
+    orderId,
+    reasonId: reasonId ?? '001',
+  });
+
+  try {
+    const ackResp = await signedPost(`${txn.bppUri}/cancel`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });

@@ -326,6 +326,24 @@ export function buildUpdate({
   };
 }
 
+/**
+ * Build a cancel message (full order cancellation by BAP).
+ * TRV11 2.0.0 cancel/example_0.yaml
+ */
+export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = '001' }) {
+  const context = buildContext({ action: 'cancel', transactionId, bppId, bppUri });
+  return {
+    context,
+    message: {
+      order_id: orderId,
+      cancellation_reason_id: reasonId,
+      descriptor: {
+        short_desc: 'Cancellation requested by buyer',
+      },
+    },
+  };
+}
+
 export function buildIssue({
   transactionId,
   bppId,
