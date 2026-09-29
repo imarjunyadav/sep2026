@@ -239,6 +239,7 @@ ondcRouter.post('/api/init', async (req, res) => {
     totalAmount: txn.quote?.totalAmount
       ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity),
     fulfillments,
+    settlementTerms: txn.settlementTerms,
   });
 
   updateTransaction(txnId, {
@@ -286,6 +287,7 @@ ondcRouter.post('/api/confirm', async (req, res) => {
     onInitPayment: txn.payment,
     paymentTransactionId,
     totalAmount,
+    settlementTerms: txn.settlementTerms,
   });
 
   try {

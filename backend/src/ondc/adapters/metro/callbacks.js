@@ -18,6 +18,7 @@ import {
 } from '../../store/orderStore.js';
 import {
   parseOnSearch,
+  parseSettlementTermsFromCatalog,
   parseOnSelect,
   parseOnInit,
   parseOnConfirm,
@@ -55,13 +56,17 @@ export function handleOnSearch(body, eventBus) {
   const txn = getOrCreateTransaction(txnId);
 
   const options = parseOnSearch(body);
+  const settlementTerms = parseSettlementTermsFromCatalog(body);
 
-  updateTransaction(txnId, {
+  const updates = {
     bppId: ctx.bpp_id,
     bppUri: ctx.bpp_uri,
     status: OrderStatus.SEARCH_COMPLETE,
     searchOptions: [...(txn.searchOptions ?? []), ...options],
-  });
+  };
+  if (settlementTerms) updates.settlementTerms = settlementTerms;
+
+  updateTransaction(txnId, updates);
 
   eventBus.emit(txnId, { event: 'on_search', options });
   return { ok: true };

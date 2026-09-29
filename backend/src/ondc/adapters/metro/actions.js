@@ -51,27 +51,27 @@ function searchSettlementTermsTags() {
   return [{ descriptor: { code: 'SETTLEMENT_TERMS' }, display: false, list }];
 }
 
-function initSettlementTermsTags(settlementAmount) {
+function initSettlementTermsTags(settlementAmount, settlementTerms) {
   const list = [
     { descriptor: { code: 'SETTLEMENT_WINDOW' }, value: 'PT60M' },
     { descriptor: { code: 'SETTLEMENT_BASIS' }, value: 'Delivery' },
     { descriptor: { code: 'SETTLEMENT_TYPE' }, value: 'NEFT' },
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
-    { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
-    { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
+    { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: settlementTerms?.mandatoryArbitration ?? 'true' },
+    { descriptor: { code: 'COURT_JURISDICTION' }, value: settlementTerms?.courtJurisdiction ?? ondcConfig.courtJurisdiction },
     { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
     { descriptor: { code: 'SETTLEMENT_AMOUNT' }, value: String(settlementAmount ?? '0') },
   ];
   return [{ descriptor: { code: 'SETTLEMENT_TERMS' }, display: false, list }];
 }
 
-function confirmSettlementTermsTags(settlementAmount) {
+function confirmSettlementTermsTags(settlementAmount, settlementTerms) {
   const list = [
     { descriptor: { code: 'SETTLEMENT_WINDOW' }, value: 'PT60M' },
     { descriptor: { code: 'SETTLEMENT_BASIS' }, value: 'Delivery' },
     { descriptor: { code: 'SETTLEMENT_TYPE' }, value: 'NEFT' },
-    { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: 'true' },
-    { descriptor: { code: 'COURT_JURISDICTION' }, value: ondcConfig.courtJurisdiction },
+    { descriptor: { code: 'MANDATORY_ARBITRATION' }, value: settlementTerms?.mandatoryArbitration ?? 'true' },
+    { descriptor: { code: 'COURT_JURISDICTION' }, value: settlementTerms?.courtJurisdiction ?? ondcConfig.courtJurisdiction },
     { descriptor: { code: 'DELAY_INTEREST' }, value: '2.5' },
     { descriptor: { code: 'STATIC_TERMS' }, value: staticTermsValue() },
   ];
@@ -84,7 +84,7 @@ function confirmSettlementTermsTags(settlementAmount) {
 function computeSettlementAmount(totalAmount) {
   if (totalAmount == null) return null;
   const feePct = Number(ondcConfig.buyerFinderFeesPct) / 100;
-  return Math.floor(Number(totalAmount) * (1 - feePct)).toString();
+  return (Math.floor(Number(totalAmount) * (1 - feePct))).toFixed(2);
 }
 
 // ── GPS normalization ────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export function buildSelect({ transactionId, bppId, bppUri, providerId, itemId, 
  *
  * @param {string|null} totalAmount  Total fare from on_select quote (used for SETTLEMENT_AMOUNT).
  */
-export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount, fulfillments }) {
+export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount, fulfillments, settlementTerms }) {
   const context = buildContext({ action: 'init', transactionId, bppId, bppUri });
   const settlementAmt = computeSettlementAmount(totalAmount);
 
@@ -173,7 +173,7 @@ export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, qu
         collected_by: 'BAP',
         status: 'NOT-PAID',
         type: 'PRE-ORDER',
-        tags: [...buyerFinderFeesTags(), ...initSettlementTermsTags(settlementAmt)],
+        tags: [...buyerFinderFeesTags(), ...initSettlementTermsTags(settlementAmt, settlementTerms)],
       },
     ],
   };
@@ -207,10 +207,9 @@ export function buildConfirm({
   onInitPayment,
   paymentTransactionId,
   totalAmount,
+  settlementTerms,
 }) {
   const context = buildContext({ action: 'confirm', transactionId, bppId, bppUri });
-
-  const paymentId = onInitPayment?.id ?? `PAY_${crypto.randomUUID().slice(0, 8)}`;
 
   const txnId = ondcConfig.mockPayment
     ? crypto.randomUUID()
@@ -219,7 +218,6 @@ export function buildConfirm({
   const settlementAmt = computeSettlementAmount(totalAmount);
 
   const payment = {
-    id: paymentId,
     collected_by: 'BAP',
     status: 'PAID',
     type: 'PRE-ORDER',
@@ -232,8 +230,12 @@ export function buildConfirm({
         bank_account_number: onInitPayment.params.bank_account_number,
       }),
     },
-    tags: [...buyerFinderFeesTags(), ...confirmSettlementTermsTags(settlementAmt)],
+    tags: [...buyerFinderFeesTags(), ...confirmSettlementTermsTags(settlementAmt, settlementTerms)],
   };
+
+  if (onInitPayment?.id) {
+    payment.id = onInitPayment.id;
+  }
 
   return {
     context,

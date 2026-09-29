@@ -19,6 +19,30 @@
  *   validityDuration,
  * }
  */
+export function parseSettlementTermsFromCatalog(body) {
+  const catalog = body?.message?.catalog;
+  if (!catalog) return null;
+
+  const allTags = [];
+  for (const provider of catalog.providers ?? []) {
+    for (const payment of provider.payments ?? []) {
+      allTags.push(...(payment.tags ?? []));
+    }
+  }
+  for (const payment of catalog.payments ?? []) {
+    allTags.push(...(payment.tags ?? []));
+  }
+
+  const stGroup = allTags.find(t => t.descriptor?.code === 'SETTLEMENT_TERMS');
+  if (!stGroup) return null;
+
+  const getValue = (code) => stGroup.list?.find(i => i.descriptor?.code === code)?.value ?? null;
+  return {
+    courtJurisdiction: getValue('COURT_JURISDICTION'),
+    mandatoryArbitration: getValue('MANDATORY_ARBITRATION'),
+  };
+}
+
 export function parseOnSearch(body) {
   const catalog = body?.message?.catalog;
   if (!catalog) return [];
