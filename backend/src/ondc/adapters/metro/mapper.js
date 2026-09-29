@@ -156,6 +156,21 @@ export function parseOnStatus(body) {
 }
 
 /**
+ * Parse on_cancel into seller-initiated cancellation state.
+ */
+export function parseOnCancel(body) {
+  const order = body?.message?.order;
+  if (!order) return null;
+
+  return {
+    orderId: order.id,
+    orderStatus: order.status ?? 'CANCELLED',
+    cancellationTerms: order.cancellation_terms ?? null,
+    payment: (order.payments ?? [])[0] ?? null,
+  };
+}
+
+/**
  * Parse on_update into partial-cancellation state.
  *
  * After SOFT_CANCEL: order.status = 'SOFT_CANCEL', quote has REFUND + CANCELLATION_CHARGES

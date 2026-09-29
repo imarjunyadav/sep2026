@@ -32,6 +32,7 @@ import {
   handleOnConfirm,
   handleOnStatus,
   handleOnUpdate,
+  handleOnCancel,
   handleOnSupport,
   handleOnIssue,
   handleOnIssueStatus,
@@ -116,6 +117,7 @@ makeCallbackRoute('on_init', handleOnInit);
 makeCallbackRoute('on_confirm', handleOnConfirm);
 makeCallbackRoute('on_status', handleOnStatus);
 makeCallbackRoute('on_update', handleOnUpdate);
+makeCallbackRoute('on_cancel', handleOnCancel);
 makeCallbackRoute('on_support', handleOnSupport);
 makeCallbackRoute('on_issue', handleOnIssue);
 makeCallbackRoute('on_issue_status', handleOnIssueStatus);

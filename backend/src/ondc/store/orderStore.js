@@ -15,6 +15,7 @@ export const OrderStatus = Object.freeze({
   INITIALIZED: 'INITIALIZED',
   CONFIRMED: 'CONFIRMED',
   COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
   FAILED: 'FAILED',
 });
 
