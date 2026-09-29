@@ -330,18 +330,18 @@ export function buildUpdate({
  * Build a cancel message (full order cancellation by BAP).
  * TRV11 2.0.0 cancel/example_0.yaml
  */
-export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = '001' }) {
+export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = '001', cancelType = 'SOFT_CANCEL' }) {
   const context = buildContext({ action: 'cancel', transactionId, bppId, bppUri });
+  const descriptorMap = {
+    SOFT_CANCEL: { code: 'SOFT_CANCEL', name: 'Soft Cancel', short_desc: 'Cancellation requested by buyer' },
+    CONFIRM_CANCEL: { code: 'CONFIRM_CANCEL', name: 'Confirm Cancel', short_desc: 'Cancellation confirmed by buyer' },
+  };
   return {
     context,
     message: {
       order_id: orderId,
       cancellation_reason_id: reasonId,
-      descriptor: {
-        code: 'SOFT_CANCEL',
-        name: 'Soft Cancel',
-        short_desc: 'Cancellation requested by buyer',
-      },
+      descriptor: descriptorMap[cancelType] || descriptorMap.SOFT_CANCEL,
     },
   };
 }

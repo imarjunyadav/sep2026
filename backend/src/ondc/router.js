@@ -371,7 +371,7 @@ ondcRouter.post('/api/update', async (req, res) => {
  * Body: { txnId, reasonId? }
  */
 ondcRouter.post('/api/cancel', async (req, res) => {
-  const { txnId, reasonId } = req.body ?? {};
+  const { txnId, reasonId, cancelType } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
 
@@ -384,6 +384,7 @@ ondcRouter.post('/api/cancel', async (req, res) => {
     bppUri: txn.bppUri,
     orderId,
     reasonId: reasonId ?? '001',
+    cancelType: cancelType ?? 'SOFT_CANCEL',
   });
 
   try {
