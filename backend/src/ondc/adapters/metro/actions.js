@@ -338,6 +338,8 @@ export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = 
       order_id: orderId,
       cancellation_reason_id: reasonId,
       descriptor: {
+        code: 'SOFT_CANCEL',
+        name: 'Soft Cancel',
         short_desc: 'Cancellation requested by buyer',
       },
     },
