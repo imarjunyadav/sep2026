@@ -170,6 +170,7 @@ export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, qu
     },
     payments: [
       {
+        id: 'PA1',
         collected_by: 'BAP',
         status: 'NOT-PAID',
         type: 'PRE-ORDER',
@@ -219,6 +220,7 @@ export function buildConfirm({
   const settlementAmt = computeSettlementAmount(totalAmount);
 
   const payment = {
+    id: onInitPayment?.id ?? 'PA1',
     collected_by: 'BAP',
     status: 'PAID',
     type: 'PRE-ORDER',
@@ -233,10 +235,6 @@ export function buildConfirm({
     },
     tags: [...buyerFinderFeesTags(), ...confirmSettlementTermsTags(settlementAmt, settlementTerms)],
   };
-
-  if (onInitPayment?.id) {
-    payment.id = onInitPayment.id;
-  }
 
   return {
     context,
