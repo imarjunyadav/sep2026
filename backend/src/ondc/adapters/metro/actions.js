@@ -104,8 +104,8 @@ function normalizeGps(gps) {
  * @param {object} to    same
  * @returns {{ context, message }}
  */
-export function buildSearch({ transactionId, from, to }) {
-  const context = buildContext({ action: 'search', transactionId });
+export function buildSearch({ transactionId, from, to, cityCode }) {
+  const context = buildContext({ action: 'search', transactionId, cityCode });
 
   const makeStop = (type, loc) => {
     const stop = { type, location: {} };
@@ -137,8 +137,8 @@ export function buildSearch({ transactionId, from, to }) {
  * TRV11 2.0.0 select/example_0.yaml
  * Only needs provider.id + items[].id + quantity — no fulfillment_ids or payments.
  */
-export function buildSelect({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1 }) {
-  const context = buildContext({ action: 'select', transactionId, bppId, bppUri });
+export function buildSelect({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, cityCode }) {
+  const context = buildContext({ action: 'select', transactionId, bppId, bppUri, cityCode });
   return {
     context,
     message: {
@@ -156,8 +156,8 @@ export function buildSelect({ transactionId, bppId, bppUri, providerId, itemId, 
  *
  * @param {string|null} totalAmount  Total fare from on_select quote (used for SETTLEMENT_AMOUNT).
  */
-export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount, fulfillments, settlementTerms }) {
-  const context = buildContext({ action: 'init', transactionId, bppId, bppUri });
+export function buildInit({ transactionId, bppId, bppUri, providerId, itemId, quantity = 1, billing, totalAmount, fulfillments, settlementTerms, cityCode }) {
+  const context = buildContext({ action: 'init', transactionId, bppId, bppUri, cityCode });
   const settlementAmt = computeSettlementAmount(totalAmount);
 
   const order = {
@@ -208,8 +208,9 @@ export function buildConfirm({
   paymentTransactionId,
   totalAmount,
   settlementTerms,
+  cityCode,
 }) {
-  const context = buildContext({ action: 'confirm', transactionId, bppId, bppUri });
+  const context = buildContext({ action: 'confirm', transactionId, bppId, bppUri, cityCode });
 
   const txnId = ondcConfig.mockPayment
     ? crypto.randomUUID()
@@ -258,8 +259,8 @@ export function buildConfirm({
  * Build a status check message.
  * TRV11 2.0.0 status/example_0.yaml
  */
-export function buildStatus({ transactionId, bppId, bppUri, orderId }) {
-  const context = buildContext({ action: 'status', transactionId, bppId, bppUri });
+export function buildStatus({ transactionId, bppId, bppUri, orderId, cityCode }) {
+  const context = buildContext({ action: 'status', transactionId, bppId, bppUri, cityCode });
   return {
     context,
     message: { order_id: orderId },
@@ -270,8 +271,8 @@ export function buildStatus({ transactionId, bppId, bppUri, orderId }) {
  * Build a support message.
  * TRV11 2.0.0 support/example_0.yaml
  */
-export function buildSupport({ transactionId, bppId, bppUri, refId }) {
-  const context = buildContext({ action: 'support', transactionId, bppId, bppUri });
+export function buildSupport({ transactionId, bppId, bppUri, refId, cityCode }) {
+  const context = buildContext({ action: 'support', transactionId, bppId, bppUri, cityCode });
   return {
     context,
     message: { ref_id: refId },
@@ -301,8 +302,9 @@ export function buildUpdate({
   fulfillmentId,
   cancelType = 'SOFT_CANCEL',
   reasonId = '001',
+  cityCode,
 }) {
-  const context = buildContext({ action: 'update', transactionId, bppId, bppUri });
+  const context = buildContext({ action: 'update', transactionId, bppId, bppUri, cityCode });
   return {
     context,
     message: {
@@ -332,8 +334,8 @@ export function buildUpdate({
  * Build a cancel message (full order cancellation by BAP).
  * TRV11 2.0.0 cancel/example_0.yaml
  */
-export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = '001', cancelType = 'SOFT_CANCEL' }) {
-  const context = buildContext({ action: 'cancel', transactionId, bppId, bppUri });
+export function buildCancel({ transactionId, bppId, bppUri, orderId, reasonId = '001', cancelType = 'SOFT_CANCEL', cityCode }) {
+  const context = buildContext({ action: 'cancel', transactionId, bppId, bppUri, cityCode });
   const descriptorMap = {
     SOFT_CANCEL: { code: 'SOFT_CANCEL', name: 'Soft Cancel', short_desc: 'Cancellation requested by buyer' },
     CONFIRM_CANCEL: { code: 'CONFIRM_CANCEL', name: 'Confirm Cancel', short_desc: 'Cancellation confirmed by buyer' },
@@ -359,8 +361,9 @@ export function buildIssue({
   billing,
   shortDesc = 'Issue with metro ticket',
   longDesc = 'Complaint regarding metro service',
+  cityCode,
 }) {
-  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri, cityCode });
   const now = new Date().toISOString();
   const issueId = crypto.randomUUID();
 
@@ -425,8 +428,9 @@ export function buildIssueEscalate({
   fulfillmentId,
   shortDesc = 'Issue with metro ticket',
   longDesc = 'Complaint regarding metro service',
+  cityCode,
 }) {
-  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri, cityCode });
   const now = new Date().toISOString();
 
   return {
@@ -503,8 +507,9 @@ export function buildIssueClose({
   fulfillmentId,
   shortDesc = 'Issue with metro ticket',
   longDesc = 'Complaint regarding metro service',
+  cityCode,
 }) {
-  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri });
+  const context = buildContext({ action: 'issue', transactionId, bppId, bppUri, cityCode });
   const now = new Date().toISOString();
 
   return {

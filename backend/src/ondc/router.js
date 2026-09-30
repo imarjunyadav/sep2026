@@ -140,14 +140,14 @@ makeCallbackRoute('on_issue_status', handleOnIssueStatus);
  * Response: { txnId }
  */
 ondcRouter.post('/api/search', async (req, res) => {
-  const { from, to, txnId: existingTxnId } = req.body ?? {};
+  const { from, to, txnId: existingTxnId, cityCode } = req.body ?? {};
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
 
   const txnId = existingTxnId || crypto.randomUUID();
   if (!getTransaction(txnId)) createTransaction(txnId);
-  updateTransaction(txnId, { searchFrom: from, searchTo: to });
+  updateTransaction(txnId, { searchFrom: from, searchTo: to, cityCode });
 
-  const payload = buildSearch({ transactionId: txnId, from, to });
+  const payload = buildSearch({ transactionId: txnId, from, to, cityCode });
 
   try {
     const searchUrl = ondcConfig.workbenchMode
@@ -187,6 +187,7 @@ ondcRouter.post('/api/select', async (req, res) => {
     providerId: resolvedProviderId,
     itemId: resolvedItemId,
     quantity: quantity ?? 1,
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -251,6 +252,7 @@ ondcRouter.post('/api/init', async (req, res) => {
       ?? deriveAmountFromSearch(txn.searchOptions, resolvedItemId, resolvedQuantity),
     fulfillments,
     settlementTerms: txn.settlementTerms,
+    cityCode: txn.cityCode,
   });
 
   updateTransaction(txnId, {
@@ -300,6 +302,7 @@ ondcRouter.post('/api/confirm', async (req, res) => {
     paymentTransactionId,
     totalAmount,
     settlementTerms: txn.settlementTerms,
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -334,6 +337,7 @@ ondcRouter.post('/api/status', async (req, res) => {
     bppId,
     bppUri,
     orderId,
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -372,6 +376,7 @@ ondcRouter.post('/api/update', async (req, res) => {
     fulfillmentId: resolvedFulfillmentId,
     cancelType: resolvedCancelType,
     reasonId: reasonId ?? '001',
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -402,6 +407,7 @@ ondcRouter.post('/api/cancel', async (req, res) => {
     orderId,
     reasonId: reasonId ?? '001',
     cancelType: cancelType ?? 'SOFT_CANCEL',
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -427,6 +433,7 @@ ondcRouter.post('/api/support', async (req, res) => {
     bppId,
     bppUri,
     refId: txnId,
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -462,6 +469,7 @@ ondcRouter.post('/api/issue', async (req, res) => {
     billing: txn.billing,
     shortDesc,
     longDesc,
+    cityCode: txn.cityCode,
   });
 
   updateTransaction(txnId, {
@@ -501,6 +509,7 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
     providerId: txn.selectedProviderId ?? firstOption?.providerId,
     itemId: txn.selectedItemId ?? firstOption?.itemId,
     fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
+    cityCode: txn.cityCode,
   });
 
   try {
@@ -536,6 +545,7 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
     providerId: txn.selectedProviderId ?? firstOption?.providerId,
     itemId: txn.selectedItemId ?? firstOption?.itemId,
     fulfillmentId: txn.selectedFulfillmentId ?? 'F1',
+    cityCode: txn.cityCode,
   });
 
   try {
