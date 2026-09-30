@@ -91,6 +91,15 @@ function deriveAmountFromSearch(searchOptions, itemId, quantity) {
   return String(Number(match.fareValue) * (quantity ?? 1));
 }
 
+const WORKBENCH_BPP_URI = 'https://workbench.ondc.tech/api-service/ONDC:TRV11/2.0.0/seller';
+const WORKBENCH_BPP_ID = 'workbench.ondc.tech';
+
+function resolveBpp(txn) {
+  const bppUri = txn.bppUri ?? (ondcConfig.workbenchMode ? WORKBENCH_BPP_URI : null);
+  const bppId = txn.bppId ?? (ondcConfig.workbenchMode ? WORKBENCH_BPP_ID : null);
+  return { bppUri, bppId };
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export const ondcRouter = Router();
@@ -162,7 +171,8 @@ ondcRouter.post('/api/select', async (req, res) => {
   const { txnId, providerId, itemId, quantity } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
-  if (!txn.bppUri) return res.status(409).json({ error: 'No BPP selected yet. Wait for on_search.' });
+  const { bppUri, bppId } = resolveBpp(txn);
+  if (!bppUri) return res.status(409).json({ error: 'No BPP selected yet. Wait for on_search.' });
 
   const firstOption = txn.searchOptions?.[0];
   const resolvedProviderId = providerId ?? firstOption?.providerId;
@@ -172,15 +182,15 @@ ondcRouter.post('/api/select', async (req, res) => {
 
   const payload = buildSelect({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     providerId: resolvedProviderId,
     itemId: resolvedItemId,
     quantity: quantity ?? 1,
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/select`, payload);
+    const ackResp = await signedPost(`${bppUri}/select`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -195,6 +205,7 @@ ondcRouter.post('/api/init', async (req, res) => {
   const { txnId, billing, providerId, itemId, quantity } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const firstOption = txn.searchOptions?.[0];
   const resolvedProviderId = providerId ?? txn.selectedProviderId ?? firstOption?.providerId;
@@ -230,8 +241,8 @@ ondcRouter.post('/api/init', async (req, res) => {
 
   const payload = buildInit({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     providerId: resolvedProviderId,
     itemId: resolvedItemId,
     quantity: resolvedQuantity,
@@ -250,7 +261,7 @@ ondcRouter.post('/api/init', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/init`, payload);
+    const ackResp = await signedPost(`${bppUri}/init`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -268,6 +279,7 @@ ondcRouter.post('/api/confirm', async (req, res) => {
   const { txnId, paymentTransactionId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const firstOption = txn.searchOptions?.[0];
   const resolvedProviderId = txn.selectedProviderId ?? firstOption?.providerId;
@@ -278,8 +290,8 @@ ondcRouter.post('/api/confirm', async (req, res) => {
 
   const payload = buildConfirm({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     providerId: resolvedProviderId,
     itemId: resolvedItemId,
     quantity: resolvedQuantity,
@@ -291,7 +303,7 @@ ondcRouter.post('/api/confirm', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/confirm`, payload);
+    const ackResp = await signedPost(`${bppUri}/confirm`, payload);
     if (!txn.orderId) {
       updateTransaction(txnId, {
         orderId: txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`,
@@ -313,18 +325,19 @@ ondcRouter.post('/api/status', async (req, res) => {
   const { txnId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
   const orderId = txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`;
   if (!txn.orderId) updateTransaction(txnId, { orderId });
 
   const payload = buildStatus({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     orderId,
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/status`, payload);
+    const ackResp = await signedPost(`${bppUri}/status`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -343,6 +356,7 @@ ondcRouter.post('/api/update', async (req, res) => {
   const { txnId, fulfillmentId, cancelType, reasonId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const orderId = txn.orderId;
   if (!orderId) return res.status(409).json({ error: 'No confirmed order. Run confirm first.' });
@@ -352,8 +366,8 @@ ondcRouter.post('/api/update', async (req, res) => {
 
   const payload = buildUpdate({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     orderId,
     fulfillmentId: resolvedFulfillmentId,
     cancelType: resolvedCancelType,
@@ -361,7 +375,7 @@ ondcRouter.post('/api/update', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/update`, payload);
+    const ackResp = await signedPost(`${bppUri}/update`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -376,21 +390,22 @@ ondcRouter.post('/api/cancel', async (req, res) => {
   const { txnId, reasonId, cancelType } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const orderId = txn.orderId;
   if (!orderId) return res.status(409).json({ error: 'No confirmed order. Run confirm first.' });
 
   const payload = buildCancel({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     orderId,
     reasonId: reasonId ?? '001',
     cancelType: cancelType ?? 'SOFT_CANCEL',
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/cancel`, payload);
+    const ackResp = await signedPost(`${bppUri}/cancel`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -405,16 +420,17 @@ ondcRouter.post('/api/support', async (req, res) => {
   const { txnId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const payload = buildSupport({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     refId: txnId,
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/support`, payload);
+    const ackResp = await signedPost(`${bppUri}/support`, payload);
     return res.json({ txnId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -430,14 +446,15 @@ ondcRouter.post('/api/issue', async (req, res) => {
   const { txnId, shortDesc, longDesc } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
   const firstOption = txn.searchOptions?.[0];
   const orderId = txn.orderId ?? `O_${crypto.randomUUID().slice(0, 8)}`;
   if (!txn.orderId) updateTransaction(txnId, { orderId });
 
   const payload = buildIssue({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     orderId,
     providerId: txn.selectedProviderId ?? firstOption?.providerId,
     itemId: txn.selectedItemId ?? firstOption?.itemId,
@@ -452,7 +469,7 @@ ondcRouter.post('/api/issue', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    const ackResp = await signedPost(`${bppUri}/issue`, payload);
     return res.json({ txnId, issueId: payload.message.issue.id, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -468,6 +485,7 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
   const { txnId, issueId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const resolvedIssueId = issueId ?? txn.igmIssue?.id;
   if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to escalate' });
@@ -475,8 +493,8 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
   const firstOption = txn.searchOptions?.[0];
   const payload = buildIssueEscalate({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     issueId: resolvedIssueId,
     billing: txn.billing,
     orderId: txn.orderId,
@@ -486,7 +504,7 @@ ondcRouter.post('/api/issue-escalate', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    const ackResp = await signedPost(`${bppUri}/issue`, payload);
     return res.json({ txnId, issueId: resolvedIssueId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
@@ -502,6 +520,7 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
   const { txnId, issueId } = req.body ?? {};
   const txn = getTransaction(txnId);
   if (!txn) return res.status(404).json({ error: 'Unknown txnId' });
+  const { bppUri, bppId } = resolveBpp(txn);
 
   const resolvedIssueId = issueId ?? txn.igmIssue?.id;
   if (!resolvedIssueId) return res.status(409).json({ error: 'No issue to close' });
@@ -509,8 +528,8 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
   const firstOption = txn.searchOptions?.[0];
   const payload = buildIssueClose({
     transactionId: txnId,
-    bppId: txn.bppId,
-    bppUri: txn.bppUri,
+    bppId,
+    bppUri,
     issueId: resolvedIssueId,
     billing: txn.billing,
     orderId: txn.orderId,
@@ -520,7 +539,7 @@ ondcRouter.post('/api/issue-close', async (req, res) => {
   });
 
   try {
-    const ackResp = await signedPost(`${txn.bppUri}/issue`, payload);
+    const ackResp = await signedPost(`${bppUri}/issue`, payload);
     return res.json({ txnId, issueId: resolvedIssueId, ack: ackResp });
   } catch (err) {
     return res.status(502).json({ error: err.message });
