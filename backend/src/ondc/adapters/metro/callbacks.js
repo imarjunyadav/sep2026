@@ -103,12 +103,17 @@ export function handleOnInit(body, eventBus) {
   const parsed = parseOnInit(body);
   if (!parsed) return { ok: false, error: 'Could not parse on_init order' };
 
-  updateTransaction(txnId, {
+  const updates = {
     status: OrderStatus.INITIALIZED,
     billing: parsed.billing,
     payment: parsed.payment,
     quote: { totalAmount: parsed.totalAmount, currency: parsed.currency },
-  });
+  };
+  if (parsed.providerId) updates.selectedProviderId = parsed.providerId;
+  if (parsed.itemId) updates.selectedItemId = parsed.itemId;
+  if (parsed.fulfillmentId) updates.selectedFulfillmentId = parsed.fulfillmentId;
+
+  updateTransaction(txnId, updates);
 
   eventBus.emit(txnId, { event: 'on_init', totalAmount: parsed.totalAmount, payment: parsed.payment });
   return { ok: true };

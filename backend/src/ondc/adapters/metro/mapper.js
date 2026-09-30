@@ -132,6 +132,9 @@ export function parseOnInit(body) {
     totalAmount: order.quote?.price?.value ?? null,
     currency: order.quote?.price?.currency ?? 'INR',
     payment,
+    providerId: order.provider?.id ?? null,
+    itemId: (order.items ?? [])[0]?.id ?? null,
+    fulfillmentId: (order.fulfillments ?? [])[0]?.id ?? null,
   };
 }
 
